@@ -15,6 +15,48 @@ Stone Spirit Spy(150): [SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 load
 
 Stone Spirit Spy(150): [SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
 
+Stone Spirit Spy(150): [SSS-HOVER] states: target=copper rock | native hover frame 892 missing or outside label hierarchy
+
+Stone Spirit Spy(150): [SSS-HOVER] states: target=copper rock | native TOPLEVEL_V2 label 902/0:0 hidden
+
+Stone Spirit Spy(150): [SSS-HOVER] states: target=nil | no hover target
+
+Stone Spirit Spy(150): [SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=Copper rock | topType=3 | topSubject=Copper rock | topText=Mine Copper rock | topOverride=Mine Copper rock (15)
+
+Stone Spirit Spy(150): [SSS-HOVER] coverage: static=3601 dynamic=5991 collections=1460 capped=4 pending=12
+
+Stone Spirit Spy(150): [SSS-HOVER] REPORT BEGIN Stone Spirit Spy 0.3.6 frames=600 UI lookups=3609
+
+Stone Spirit Spy(31): [SSS-HOVER] Stone Spirit Spy 0.3.6 recording for 5 seconds. Close settings and hover Copper rock.
+
+Stone Spirit Spy(94): Stone Spirit Spy 0.3.6 loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+
+Tilemarkers(28): loaded
+
+Stone Spirit Spy(94): Stone Spirit Spy 0.3.5 loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+
+Tilemarkers(28): loaded
+
+Stone Spirit Spy(151): [SSS-HOVER] Open plugin settings > Show diagnostic report to select and copy the report.
+
+Stone Spirit Spy(150): [SSS-HOVER] REPORT END
+
+Stone Spirit Spy(150): [SSS-HOVER] samples: TEXT_TOOLTIP static=15 category=-1 dynamic=-1 visible=true restricted=false parentStatic=1 text=Tooltip text
+
+Stone Spirit Spy(150): [SSS-HOVER] labels: TOPLEVEL_V2 static=902/0:0 category=0 dynamic=0 visible=true restricted=false parentStatic=902 text=Mine Copper rock
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: MINIMENU id=1322 loaded=true
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=false
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
+
 Stone Spirit Spy(150): [SSS-HOVER] states: target=copper rock | native label text does not match target: Tooltip text
 
 Stone Spirit Spy(150): [SSS-HOVER] states: target=nil | no hover target
