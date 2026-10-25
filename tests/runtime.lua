@@ -807,6 +807,29 @@ test("diagnostic caps large dynamic collections and reports stale children", fun
     assert(report:find("REPORT END", 1, true))
 end)
 
+test("diagnostic captures live parent sizes when the assumed frame is absent", function()
+    boot()
+    nativePanels[1477][892] = nil
+    nativePanels[1477][902].parent = {staticID=777, interfaceID=1477, type=0,
+        width=138, height=24, visibleGlobal=true,
+        size={width=138, height=24, widthParentPc=0, heightParentPc=0}}
+    nativeTooltip.content = "Mine Copper rock"
+    local recorder = require("lib/hover_diagnostics").new(function() end)
+    recorder:start()
+    for _=1,600 do
+        local before = uiLookups
+        recorder:draw(nil, "native hover frame 892 missing or outside label hierarchy")
+        assert(uiLookups-before <= 16)
+    end
+    local report = recorder:report()
+    assert(report:find("layout:", 1, true))
+    assert(report:find("candidate TOPLEVEL_V2/892 missing", 1, true))
+    assert(report:find("static=777", 1, true))
+    assert(report:find("width=138 height=24", 1, true))
+    assert(report:find("parent chain ended", 1, true))
+    equal(nativeTooltip.content, "Mine Copper rock")
+end)
+
 test("settings diagnostic records actual target and options without saving a new setting", function()
     boot({showHoverCount=false})
     nativeBag = {{obj={id=44779}, count=1}}

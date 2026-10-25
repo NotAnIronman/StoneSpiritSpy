@@ -78,7 +78,10 @@ function M.new()
                 ancestor = ancestor.parent
             end
             if not box or box.type ~= ui.ComponentType.LAYER or not insideFrame then
-                state = "native hover frame 892 missing or outside label hierarchy"; restore(); return
+                state = "native hover frame 892 invalid: found=" .. tostring(box ~= nil)
+                    .. " type=" .. tostring(box and box.type) .. " expected=" .. tostring(ui.ComponentType.LAYER)
+                    .. " ancestor=" .. tostring(insideFrame)
+                restore(); return
             end
             if applied and (applied.label ~= label or applied.box ~= box) then restore() end
             local current = label.content

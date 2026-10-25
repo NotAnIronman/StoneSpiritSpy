@@ -8,6 +8,19 @@ local function short(value)
     return tostring(value):gsub("[\r\n]", " "):sub(1, 180)
 end
 
+local function read(object, key)
+    if object == nil then return nil end
+    local ok, value = pcall(function() return object[key] end)
+    if ok then return value end
+    return "unavailable"
+end
+
+local function address(component)
+    if not component then return "nil" end
+    return short(read(component, "interfaceID")) .. "/" .. short(read(component, "staticID"))
+        .. "/" .. short(read(component, "categoryID")) .. ":" .. short(read(component, "dynamicID"))
+end
+
 function M.new(output)
     local self = {}
     local capture, lastReport
@@ -27,8 +40,8 @@ function M.new(output)
     function self:start()
         capture = {remaining=5, frames=0, calls=0, panel=1, component=-1,
             static=0, dynamic=0, collections=0, truncated=0, pending={},
-            menus={}, states={}, labels={}, samples={}, panels={}, seen={}}
-        output(PREFIX .. "Stone Spirit Spy 0.3.6 recording for 5 seconds. Close settings and hover Copper rock.")
+            menus={}, states={}, labels={}, samples={}, panels={}, layout={}, traces=0, seen={}}
+        output(PREFIX .. "Stone Spirit Spy 0.3.7 recording for 5 seconds. Close settings and hover Copper rock.")
     end
 
     function self:menu(entries, context)
@@ -52,6 +65,41 @@ function M.new(output)
         remember("menus", table.concat(lines, " | "), 6)
     end
 
+    local function describeLayout(component, source)
+        if not component then remember("layout", source .. " missing", 64); return end
+        remember("layout", source .. " interface=" .. short(read(component, "interfaceID"))
+            .. " static=" .. short(read(component, "staticID"))
+            .. " category=" .. short(read(component, "categoryID")) .. " dynamic=" .. short(read(component, "dynamicID"))
+            .. " type=" .. short(read(component, "type")) .. " visible=" .. short(read(component, "visibleGlobal"))
+            .. " width=" .. short(read(component, "width")) .. " height=" .. short(read(component, "height")), 64)
+        local size, xy = read(component, "size"), read(component, "xyGlobal")
+        remember("layout", source .. " rawSize=" .. short(read(size, "width")) .. "," .. short(read(size, "height"))
+            .. "," .. short(read(size, "widthParentPc")) .. "," .. short(read(size, "heightParentPc"))
+            .. " xy=" .. short(read(xy, "x")) .. "," .. short(read(xy, "y"))
+            .. " parent=" .. address(read(component, "parent"))
+            .. " parentStatic=" .. address(read(component, "parentStatic")), 64)
+    end
+
+    local function traceLayout(component, path)
+        if capture.seen["trace" .. path] or capture.traces >= 2 then return end
+        capture.seen["trace" .. path] = true
+        capture.traces = capture.traces + 1
+        local visited = {}
+        for depth=0,11 do
+            local source = "trace " .. path .. " depth=" .. depth
+            if not component then remember("layout", source .. " parent chain ended", 64); return end
+            local key = address(component)
+            if visited[key] then remember("layout", source .. " parent cycle at " .. key, 64); return end
+            visited[key] = true
+            describeLayout(component, source)
+            component = read(component, "parent")
+            if component == "unavailable" then
+                remember("layout", source .. " parent unavailable", 64); return
+            end
+        end
+        remember("layout", "trace " .. path .. " reached ancestor limit", 64)
+    end
+
     local function inspect(component, path, depth)
         if component.type == ui.ComponentType.LABEL then
             local content = component.content
@@ -65,6 +113,7 @@ function M.new(output)
                 .. " text=" .. short(content)
             if plain:find("copper", 1, true) or plain:find("rock", 1, true) then
                 remember("labels", description, 32)
+                if path:find("TOPLEVEL_V2 static=902/", 1, true) then traceLayout(component, path) end
             elseif path:find("TEXT_TOOLTIP", 1, true) or path:find("TOPLEVEL_V2_HOVER_TARGET", 1, true) then
                 remember("samples", description, 24)
             end
@@ -120,6 +169,13 @@ function M.new(output)
         end
         local component = panelID and ui.Interfaces:GetComponent(panelID, staticID)
         capture.static = capture.static + 1
+        if panelName == "TOPLEVEL_V2" and (staticID == 892 or staticID == 902) then
+            local key = "candidate" .. staticID
+            if not capture.seen[key] then
+                capture.seen[key] = true
+                describeLayout(component, "candidate TOPLEVEL_V2/" .. staticID)
+            end
+        end
         if component then inspect(component, panelName .. " static=" .. staticID, 0) end
     end
 
@@ -137,11 +193,11 @@ function M.new(output)
             capture.remaining = capture.remaining - math.min(delta, 0.25)
         end
         if capture.remaining > 0 and capture.frames < 600 then return end
-        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.6 frames=" .. capture.frames .. " UI lookups=" .. capture.calls,
+        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.7 frames=" .. capture.frames .. " UI lookups=" .. capture.calls,
             PREFIX .. "coverage: static=" .. capture.static .. " dynamic=" .. capture.dynamic
                 .. " collections=" .. capture.collections .. " capped=" .. capture.truncated
                 .. " pending=" .. #capture.pending}
-        for _, group in ipairs({"menus", "states", "panels", "labels", "samples"}) do
+        for _, group in ipairs({"menus", "states", "panels", "labels", "samples", "layout"}) do
             if #capture[group] == 0 then lines[#lines+1] = PREFIX .. group .. ": none captured" end
             for _, line in ipairs(capture[group]) do lines[#lines+1] = PREFIX .. group .. ": " .. line end
         end

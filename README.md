@@ -14,10 +14,12 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.3.6** widens the native hover frame along with its text, fixing the
-previous label-only resize. The text update was confirmed in game on 0.3.5.
-This build preserves native padding and handles both full and number-only labels,
-changing counts, and client layout resets. The frame resize still needs an in-game check.
+Version **0.3.7** is a diagnostic build for the unresolved hover sizing issue.
+The 0.3.5 text update was confirmed in game but overflowed its box. The 0.3.6
+report showed that frame `892` could not be verified, causing the annotation to be
+skipped. The older cache hierarchy is therefore not sufficient to identify the
+live frame. This build captures the actual label parent chain and dimensions;
+it does not claim to fix hover sizing.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -63,6 +65,10 @@ hover frame and text area together. It preserves native padding and accounts for
 labels that already grow with their parents. It restores the original text and
 dimensions when the count no longer applies.
 
+That resize attempt currently requires frame `892` to be a layer in the label's
+parent chain. The supplied live report fails this check, so hover annotations are
+skipped in that scenario. Right-click counts remain available.
+
 ## Record the missing hover count
 
 1. Install this build and reload it with `prf`, then `prl StoneSpiritSpy`.
@@ -81,6 +87,12 @@ transcription is needed.
 
 The report includes the selected menu target, active display settings, the native
 hover update result, and rock-related text found in four candidate UI panels.
+Its `layout` section records the live rock label and up to twelve parent levels,
+including component IDs, types, dimensions, relative sizing, positions, and static
+parent references. Separate snapshots check candidates `892` and `902`. These
+reads distinguish the actual client hierarchy from the older cache layout without
+changing candidate components. At most two label paths are traced per recording;
+cycles, missing parents, and unavailable properties are handled explicitly.
 It scans static components and their dynamic descendants, recording category and
 dynamic IDs in each path. Samples from the two tooltip panels include placeholder
 and empty labels. Coverage counters show static reads, dynamic visits, collection
@@ -167,8 +179,9 @@ count only when the label is visible, has the expected type, and its text matche
 the current rock. This address comes from the supplied 0.3.4 report in
 `HoverReport.txt`, captured on client 951-1. The label is resolved each Draw so
 missing or recreated native children do not leave the plugin holding a stale target.
-The cache layout places this label inside layers `902`, `899`, and `895`, under
-outer frame `892`. The plugin verifies that ancestor before resizing frame `892`.
+The older cache layout places this label inside layers `902`, `899`, and `895`, under
+outer frame `892`; the 0.3.6 live report did not confirm that relationship.
+The plugin requires that ancestor before attempting to resize frame `892`.
 Its background layers inherit the new width. Label sizing accounts for inherited
 parent growth so a relative label does not widen twice. Repeated Draws set sizes
 from the saved originals, including when the client resets the frame dimensions.
