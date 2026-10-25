@@ -55,8 +55,8 @@ subscribe("InventoryUpdated", function(event) reader:inventoryChanged(event.inv)
 subscribe("InventoryRemoved", function(event) reader:inventoryChanged(event.inv) end)
 subscribe("GameStateChanged", function() reader:reset() end)
 
-subscribe("PluginShutdown", function()
+function PluginShutdown()
     for _, name in ipairs(subscriptions) do Event[name].Unsubscribe(reference) end
-end)
+end
 
-log("Stone Spirit Spy 0.1.0 loaded. Carry an ore box and hover over a rock.")
+log("Stone Spirit Spy 0.1.1 loaded. Carry an ore box and hover over a rock.")

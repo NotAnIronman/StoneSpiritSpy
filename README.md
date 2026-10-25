@@ -13,7 +13,11 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.1.0** is a development build. Local Lua checks pass against the supplied
+Version **0.1.1** fixes a startup error caused by subscribing to a nonexistent
+shutdown event. Shutdown uses the native global `PluginShutdown()` callback.
+The test fixture now exposes only supported event names.
+
+This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
 
 ## Install in the developer client

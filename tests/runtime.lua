@@ -146,14 +146,14 @@ end)
 local handlers, logs, available, nativeBag, nativeValues
 local function boot()
     handlers, logs, available, nativeBag, nativeValues = {}, {}, true, {}, {}
-    Event = setmetatable({}, {__index=function(self, name)
-        local event = {
+    Event = {}
+    for _, name in ipairs({"MiniMenuReady", "InventoryAdded", "InventoryUpdated", "InventoryRemoved", "GameStateChanged"}) do
+        Event[name] = {
             Subscribe=function(reference, callback) handlers[name]=callback end,
             Unsubscribe=function(reference) handlers[name]=nil end,
         }
-        rawset(self, name, event)
-        return event
-    end})
+    end
+    PluginShutdown = nil
     config = {Inv={INV={id=93}}}
     var = {VarPlayer=setmetatable({FromID=function(id)
         for _, cfg in pairs(nativeValues) do if cfg.id == id then return cfg end end
@@ -260,7 +260,9 @@ test("real entrypoint performs no Draw or Logic work and unsubscribes on shutdow
     boot()
     equal(handlers.Draw, nil)
     equal(handlers.Logic, nil)
-    handlers.PluginShutdown({})
+    equal(Event.PluginShutdown, nil)
+    equal(type(PluginShutdown), "function")
+    PluginShutdown()
     equal(next(handlers), nil)
 end)
 
