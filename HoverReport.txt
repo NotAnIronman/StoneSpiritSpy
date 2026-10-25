@@ -1,10 +1,192 @@
-[SSS-HOVER] REPORT BEGIN Stone Spirit Spy 0.3.3 frames=600 UI lookups=9600
-[SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=<col=00ffff>Copper rock | topType=3 | topSubject=<col=00ffff>Copper rock | topText=Mine <col=00ffff>Copper rock | topOverride=Mine <col=00ffff>Copper rock <col=80d8ff>(15)</col>
-[SSS-HOVER] states: target=nil | no hover target
-[SSS-HOVER] states: target=copper rock | native label text does not match target: Tooltip text
-[SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
-[SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=true
-[SSS-HOVER] panels: MINIMENU id=1322 loaded=true
-[SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
-[SSS-HOVER] labels: none captured
-[SSS-HOVER] REPORT END
+
+Stone Spirit Spy(151): [SSS-HOVER] Open plugin settings > Show diagnostic report to select and copy the report.
+
+Stone Spirit Spy(150): [SSS-HOVER] REPORT END
+
+Stone Spirit Spy(150): [SSS-HOVER] samples: TEXT_TOOLTIP static=15 category=-1 dynamic=-1 visible=true restricted=false parentStatic=1 text=Tooltip text
+
+Stone Spirit Spy(150): [SSS-HOVER] labels: TOPLEVEL_V2 static=902/0:0 category=0 dynamic=0 visible=true restricted=false parentStatic=902 text=Mine Copper rock
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: MINIMENU id=1322 loaded=true
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=false
+
+Stone Spirit Spy(150): [SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
+
+Stone Spirit Spy(150): [SSS-HOVER] states: target=copper rock | native label text does not match target: Tooltip text
+
+Stone Spirit Spy(150): [SSS-HOVER] states: target=nil | no hover target
+
+Stone Spirit Spy(150): [SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=Copper rock | topType=3 | topSubject=Copper rock | topText=Mine Copper rock | topOverride=Mine Copper rock (15)
+
+Stone Spirit Spy(150): [SSS-HOVER] coverage: static=3348 dynamic=4708 collections=1207 capped=4 pending=5
+
+Stone Spirit Spy(150): [SSS-HOVER] REPORT BEGIN Stone Spirit Spy 0.3.4 frames=504 UI lookups=3356
+
+Stone Spirit Spy(31): [SSS-HOVER] Stone Spirit Spy 0.3.4 recording for 5 seconds. Close settings and hover Copper rock.
+
+Stone Spirit Spy(94): Stone Spirit Spy 0.3.4 diagnostic build loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+
+Tilemarkers(28): loaded
+
+Stone Spirit Spy(108): [SSS-HOVER] Open plugin settings > Show diagnostic report to select and copy the report.
+
+Stone Spirit Spy(107): [SSS-HOVER] REPORT END
+
+Stone Spirit Spy(107): [SSS-HOVER] labels: none captured
+
+Stone Spirit Spy(107): [SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
+
+Stone Spirit Spy(107): [SSS-HOVER] panels: MINIMENU id=1322 loaded=true
+
+Stone Spirit Spy(107): [SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=true
+
+Stone Spirit Spy(107): [SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
+
+Stone Spirit Spy(107): [SSS-HOVER] states: target=copper rock | native label text does not match target: Tooltip text
+
+Stone Spirit Spy(107): [SSS-HOVER] states: target=nil | no hover target
+
+Stone Spirit Spy(107): [SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=Copper rock | topType=3 | topSubject=Copper rock | topText=Mine Copper rock | topOverride=Mine Copper rock (15)
+
+Stone Spirit Spy(107): [SSS-HOVER] REPORT BEGIN Stone Spirit Spy 0.3.3 frames=600 UI lookups=9600
+
+Stone Spirit Spy(29): [SSS-HOVER] Stone Spirit Spy 0.3.3 recording for 5 seconds. Close settings and hover Copper rock.
+
+Stone Spirit Spy(94): Stone Spirit Spy 0.3.3 diagnostic build loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+
+Stone Spirit Spy(101): [SSS-HOVER] REPORT END. Copy the SSS-HOVER lines for diagnosis.
+
+Stone Spirit Spy(98): [SSS-HOVER] labels: none captured
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: MINIMENU id=1322 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] states: target=copper rock | native label text does not match target: Tooltip text
+
+Stone Spirit Spy(99): [SSS-HOVER] states: target=nil | no hover target
+
+Stone Spirit Spy(99): [SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=Copper rock | topType=3 | topSubject=Copper rock | topText=Mine Copper rock | topOverride=Mine Copper rock (15)
+
+Stone Spirit Spy(96): [SSS-HOVER] REPORT BEGIN frames=600 UI lookups=9600
+
+Stone Spirit Spy(25): [SSS-HOVER] Stone Spirit Spy 0.3.2 recording for 5 seconds. Close settings and hover Copper rock.
+
+Stone Spirit Spy(101): [SSS-HOVER] REPORT END. Copy the SSS-HOVER lines for diagnosis.
+
+Stone Spirit Spy(98): [SSS-HOVER] labels: none captured
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: MINIMENU id=1322 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
+
+Stone Spirit Spy(99): [SSS-HOVER] states: target=copper rock | native label text does not match target: Tooltip text
+
+Stone Spirit Spy(99): [SSS-HOVER] states: target=nil | no hover target
+
+Stone Spirit Spy(99): [SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=Copper rock | topType=3 | topSubject=Copper rock | topText=Mine Copper rock | topOverride=Mine Copper rock (15)
+
+Stone Spirit Spy(96): [SSS-HOVER] REPORT BEGIN frames=600 UI lookups=9600
+
+Stone Spirit Spy(25): [SSS-HOVER] Stone Spirit Spy 0.3.2 recording for 5 seconds. Close settings and hover Copper rock.
+
+Stone Spirit Spy(95): Stone Spirit Spy 0.3.2 diagnostic build loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+
+Stone Spirit Spy(86): Stone Spirit Spy 0.3.1 loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+
+Stone Spirit Spy(84): Stone Spirit Spy 0.2.0 loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+Could not execute 'plugins_reload':- arg 0: expected 'string' but received 'null'- usage: 'plugins_reload string'
+prl
+prf
+
+StoneSpiritSpy(84): Stone Spirit Spy 0.2.0 loaded. Carry an ore box and hover over a rock.
+Put 1 raw_shark in inv
+!give raw_shark
+Unknown asset type name "ObjId"
+pan ObjId
+Unknown asset type name "ObjID"
+pan ObjID
+Unrecognised object: 39920
+!give 39920
+Copied "Obj" list to clipboard
+pan Obj
+Unknown asset type name "ObjType"
+pan ObjType
+Unrecognised object: log_jungle
+!give log_jungle 10
+Unrecognised object: jungle_log
+!give Jungle_log 10
+Unrecognised object: jungle_log
+!give jungle_log 10
+Unrecognised object: jungle_logs
+!give jungle_logs 10
+Set hunter to 75
+!skillsetlevel hunter 75
+Could not find API cheat setskilllevel
+!setskilllevel hunter 75
+Put 1 raw_shark in inv
+!give raw_shark
+Teleported to 0,83,36,18,11
+Teleported to 0,83,36,37,21
+Teleported to 0,84,36,9,34
+Put 1 copper_ore in inv
+!give copper_ore 1
+Unrecognised inventory: ore
+!give copper ore
+displayfps
+God mode enabled.
+!godmode
+
+Collection Log Expanded(29): Collection Log Expanded Wiki access: allowed
+
+Collection Log Expanded(683): Collection Log Expanded 0.7.30 enabled. Wiki access: blocked
+!bank
+
+StoneSpiritSpy(62): Stone Spirit Spy 0.1.1 loaded. Carry an ore box and hover over a rock.
+
+[ERROR] in StoneSpiritSpy(-1): [string "local Catalog = require("lib/catalog")..."]:19: attempt to index a nil value (field '?')
+stack traceback:
+	[string "local Catalog = require("lib/catalog")..."]:19: in local 'subscribe'
+	[string "local Catalog = require("lib/catalog")..."]:58: in main chunk
+
+[ERROR] in StoneSpiritSpy(-1): [string "local Catalog = require("lib/catalog")..."]:19: attempt to index a nil value (field '?')
+stack traceback:
+	[string "local Catalog = require("lib/catalog")..."]:19: in local 'subscribe'
+	[string "local Catalog = require("lib/catalog")..."]:58: in main chunk
+
+Collection Log Expanded(683): Collection Log Expanded 0.7.30 enabled. Wiki access: blocked
+
+Tilemarkers(28): loaded
+Copied "VarPlayer" list to clipboard
+pan VarPlayer
+Copied "Inv" list to clipboard
+pan Inv
+Unknown asset type name "inv"
+pan inv
+This is the developer console. To close, press the ALT-`, ALT-² or ALT-§ keys on your keyboard.
+GPU Device: NVIDIA GeForce RTX 5070/PCIe/SSE2
+CPU Type: AMD Ryzen 7 5700X 8-Core Processor
+Client Version: 951-1
+
+Tilemarkers(28): loaded
