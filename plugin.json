@@ -1,0 +1,12 @@
+{
+  "name": "Stone Spirit Spy",
+  "version": "0.1.0",
+  "contactEmailAddress": "TheMonthOfAugustus@gmail.com",
+  "requiredDependencies": {},
+  "optionalDependencies": {},
+  "requiredPermissions": [],
+  "optionalPermissions": [],
+  "urls": {},
+  "hasSettingsIcon": false,
+  "hasRibbonIcon": false
+}
