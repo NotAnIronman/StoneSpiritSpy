@@ -1,0 +1,10 @@
+[SSS-HOVER] REPORT BEGIN Stone Spirit Spy 0.3.3 frames=600 UI lookups=9600
+[SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=<col=00ffff>Copper rock | topType=3 | topSubject=<col=00ffff>Copper rock | topText=Mine <col=00ffff>Copper rock | topOverride=Mine <col=00ffff>Copper rock <col=80d8ff>(15)</col>
+[SSS-HOVER] states: target=nil | no hover target
+[SSS-HOVER] states: target=copper rock | native label text does not match target: Tooltip text
+[SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
+[SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=true
+[SSS-HOVER] panels: MINIMENU id=1322 loaded=true
+[SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
+[SSS-HOVER] labels: none captured
+[SSS-HOVER] REPORT END
