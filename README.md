@@ -14,11 +14,10 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.3.5** corrects the hover target using the supplied client 951-1 report:
-`TOPLEVEL_V2` component `902`, category `0`, dynamic child `0` contained
-`Mine Copper rock`. The former `TEXT_TOOLTIP` target contained only `Tooltip text`.
-The local regression now reproduces that layout and verifies the count is appended
-to the dynamic label. Visual confirmation in game is still required.
+Version **0.3.6** widens the native hover frame along with its text, fixing the
+previous label-only resize. The text update was confirmed in game on 0.3.5.
+This build preserves native padding and handles both full and number-only labels,
+changing counts, and client layout resets. The frame resize still needs an in-game check.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -59,9 +58,10 @@ Open **Plugin Hub > Manage > Stone Spirit Spy** and select its gear icon.
 
 Settings are saved immediately and restored when the plugin reloads.
 The client keeps control of the hover box's position, visibility, and styling.
-The plugin updates the existing label's text and widens that label to fit the count,
-preserving its relative size settings and its parent's layout. It restores the
-original text and label dimensions when the count no longer applies.
+The plugin measures the added text using the label's font and widens the existing
+hover frame and text area together. It preserves native padding and accounts for
+labels that already grow with their parents. It restores the original text and
+dimensions when the count no longer applies.
 
 ## Record the missing hover count
 
@@ -167,6 +167,11 @@ count only when the label is visible, has the expected type, and its text matche
 the current rock. This address comes from the supplied 0.3.4 report in
 `HoverReport.txt`, captured on client 951-1. The label is resolved each Draw so
 missing or recreated native children do not leave the plugin holding a stale target.
+The cache layout places this label inside layers `902`, `899`, and `895`, under
+outer frame `892`. The plugin verifies that ancestor before resizing frame `892`.
+Its background layers inherit the new width. Label sizing accounts for inherited
+parent growth so a relative label does not widen twice. Repeated Draws set sizes
+from the saved originals, including when the client resets the frame dimensions.
 The recorder also inspects dynamic components using the documented
 [`IterateDynamicComponents`](https://developer.runescape.com/rs/ui/component_collection.html)
 API. No hover UI components are created.

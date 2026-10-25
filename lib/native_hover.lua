@@ -10,6 +10,17 @@ local function restoreSize(component, size)
     component:SetSize(size[1], size[2], size[3], size[4])
 end
 
+local function sameSize(component, size)
+    if not size then return false end
+    local current = sizeOf(component)
+    for i=1,4 do if current[i] ~= size[i] then return false end end
+    return true
+end
+
+local function setSize(component, size)
+    if not sameSize(component, size) then restoreSize(component, size) end
+end
+
 function M.new()
     local self = {}
     local name, suffix, applied, lastError
@@ -20,8 +31,9 @@ function M.new()
             pcall(function()
                 if applied.label.content == applied.rendered then
                     applied.label.content = applied.original
-                    restoreSize(applied.label, applied.labelSize)
                 end
+                if sameSize(applied.box, applied.renderedBoxSize) then restoreSize(applied.box, applied.boxSize) end
+                if sameSize(applied.label, applied.renderedLabelSize) then restoreSize(applied.label, applied.labelSize) end
             end)
             applied = nil
         end
@@ -56,7 +68,19 @@ function M.new()
                 state = "native TOPLEVEL_V2 label 902/0:0 hidden"
                 restore(); return
             end
-            if applied and applied.label ~= label then restore() end
+            -- Cache hierarchy: label -> 902 -> 899 -> 895 -> outer frame 892.
+            -- Its backgrounds inherit the frame width through these layers.
+            local box = ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 892)
+            local ancestor, insideFrame = label.parent, false
+            for _=1,8 do
+                if not ancestor then break end
+                if ancestor.staticID == 892 then insideFrame = true; break end
+                ancestor = ancestor.parent
+            end
+            if not box or box.type ~= ui.ComponentType.LAYER or not insideFrame then
+                state = "native hover frame 892 missing or outside label hierarchy"; restore(); return
+            end
+            if applied and (applied.label ~= label or applied.box ~= box) then restore() end
             local current = label.content
             local original = applied and current == applied.rendered and applied.original or current
             local plain = Catalog.normalise(original)
@@ -68,20 +92,26 @@ function M.new()
             end
 
             local rendered = original .. suffix
-            if applied and current == applied.rendered and rendered == applied.rendered then
-                state = "native label still contains count"; return
-            end
-            if not applied or applied.label ~= label or (current ~= applied.rendered and current ~= applied.original) then
+            if not applied or (current ~= applied.rendered and current ~= applied.original) then
                 restore()
-                applied = {original=original, labelSize=sizeOf(label)}
+                applied = {original=original, labelSize=sizeOf(label), boxSize=sizeOf(box),
+                    parentWidth=label.parent.width}
             end
-            applied.label, applied.rendered = label, rendered
+            applied.label, applied.box, applied.rendered = label, box, rendered
             local font = config.Font.FromID(label.font)
             local extraWidth = math.max(0, font:GetStringWidth(rendered, false) - font:GetStringWidth(original, false))
             label.content = rendered
-            local size = applied.labelSize
-            label:SetSize(size[1] + extraWidth, size[2], size[3], size[4])
+            local boxSize, labelSize = applied.boxSize, applied.labelSize
+            applied.renderedBoxSize = {boxSize[1] + extraWidth, boxSize[2], boxSize[3], boxSize[4]}
+            setSize(box, applied.renderedBoxSize)
+            -- A relative label already grows with its parent; add only the
+            -- remaining width, so it stays centred inside the larger frame.
+            local inheritedWidth = (label.parent.width - applied.parentWidth) * labelSize[3]
+            applied.renderedLabelSize = {math.ceil(labelSize[1] + extraWidth - inheritedWidth),
+                labelSize[2], labelSize[3], labelSize[4]}
+            setSize(label, applied.renderedLabelSize)
             state = "native label write readback=" .. tostring(label.content == rendered)
+                .. " frameWidth=" .. tostring(box.width) .. " labelWidth=" .. tostring(label.width)
         end)
         if not ok then
             state = "native update error: " .. tostring(err)
