@@ -54,10 +54,11 @@ function M.isCount(value)
     return type(value) == "number" and value >= 0 and value <= 2147483647 and value % 1 == 0
 end
 
-function M.label(spirit, count)
-    if count == nil then return spirit.name .. " Stone Spirits: unavailable" end
+function M.label(spirit, count, numberOnly)
+    if count == nil then return numberOnly and "?" or spirit.name .. " Stone Spirits: unavailable" end
     local number = string.format("%.0f", count)
     number = number:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+    if numberOnly then return number end
     return number .. " " .. spirit.name .. (count == 1 and " Stone Spirit" or " Stone Spirits")
 end
 

@@ -143,11 +143,13 @@ test("labels preserve full counts and distinguish zero from unavailable", functi
     equal(Catalog.label(copper, nil), "Copper Stone Spirits: unavailable")
 end)
 
-local handlers, logs, available, nativeBag, nativeValues
-local function boot()
+local handlers, logs, available, nativeBag, nativeValues, widgets, uiRoot, settingsHost, mouse, menuOpen, saved
+local function boot(preferences)
     handlers, logs, available, nativeBag, nativeValues = {}, {}, true, {}, {}
+    widgets, mouse, menuOpen, saved = {}, {x=200, y=200}, false, preferences or {}
     Event = {}
-    for _, name in ipairs({"MiniMenuReady", "InventoryAdded", "InventoryUpdated", "InventoryRemoved", "GameStateChanged"}) do
+    for _, name in ipairs({"MiniMenuReady", "InventoryAdded", "InventoryUpdated", "InventoryRemoved", "GameStateChanged",
+        "MiniMenuOpened", "WindowFocusChanged", "SettingsLayerReady"}) do
         Event[name] = {
             Subscribe=function(reference, callback) handlers[name]=callback end,
             Unsubscribe=function(reference) handlers[name]=nil end,
@@ -155,6 +157,41 @@ local function boot()
     end
     PluginShutdown = nil
     config = {Inv={INV={id=93}}}
+    config.Font = {FromID=function() return {GetStringWidth=function(_, content) return #content * 7 end} end}
+    PersistentDB = {
+        GetBool=function(_, key) if type(saved[key]) == "boolean" then return saved[key] end end,
+        SetBool=function(_, key, value) saved[key]=value; return true end,
+    }
+    game = {options={InterfaceScale={setting=100}}}
+    id = {Font={MUSEO_SANS_15PT_REGULAR=1}, StyleSheet={BUTTON_DEFAULT=2},
+        Component={TOPLEVEL_V2__PLUGIN_BUILD_LAYER_TOP=3}}
+    local function component(kind, parent)
+        local control = {kind=kind, parent=parent, children={}, hooks={}, hidden=false, text={}}
+        function control:SetPos(x, y) self.x, self.y=x, y end
+        function control:SetSize(w, h, wp, hp)
+            self.width, self.height=w+(wp or 0)*(self.parent.width or 0), h+(hp or 0)*(self.parent.height or 0)
+        end
+        function control:Subscribe(hook, callback) self.hooks[hook]=callback end
+        function control:Destroy()
+            self.destroyed, self.hidden = true, true
+            for _, child in ipairs(self.children) do child:Destroy() end
+        end
+        if parent then parent.children[#parent.children+1]=control end
+        widgets[#widgets+1]=control
+        return control
+    end
+    uiRoot = component("Host")
+    uiRoot.width, uiRoot.height, uiRoot.xyGlobal = 1024, 768, {x=0,y=0}
+    settingsHost = component("SettingsHost")
+    settingsHost.width, settingsHost.height = 420, 300
+    ui = {Hook={ONBUTTONPRESSED=1}, Interfaces={GetComponent=function(_, componentID)
+        equal(componentID, 3); return uiRoot
+    end}}
+    for _, kind in ipairs({"Layer", "Rectangle", "Text", "Button"}) do
+        ui[kind] = {new=function(parent) return component(kind, parent) end}
+    end
+    Mouse = {IsAvailable=function() return true end, GetPosition=function() return mouse end}
+    MiniMenu = {IsOpen=function() return menuOpen end}
     var = {VarPlayer=setmetatable({FromID=function(id)
         for _, cfg in pairs(nativeValues) do if cfg.id == id then return cfg end end
     end}, {__index=function(_, name) return nativeValues[name] end})}
@@ -172,6 +209,29 @@ local function rock(name)
         fullText="Mine <col=ffff00>" .. name .. "</col>", actionType=3}
 end
 local function hover(entries) handlers.MiniMenuReady({miniMenu={entries=entries}}) end
+local function overlay()
+    for _, control in ipairs(widgets) do
+        if control.kind == "Layer" and control.parent == uiRoot and not control.destroyed then return control end
+    end
+end
+local function overlayLabel()
+    local layer = overlay()
+    for _, child in ipairs(layer and layer.children or {}) do
+        if child.kind == "Text" then return child end
+    end
+end
+local function clickSetting(prefix)
+    for _, child in ipairs(settingsHost.children) do child:Destroy() end
+    settingsHost.children = {}
+    handlers.SettingsLayerReady({component=settingsHost})
+    for _, control in ipairs(widgets) do
+        if control.kind == "Button" and not control.destroyed and control.label:find(prefix, 1, true) == 1 then
+            control.hooks[ui.Hook.ONBUTTONPRESSED](control)
+            return control
+        end
+    end
+    error("Missing setting: " .. prefix)
+end
 
 test("real entrypoint shows the requested 248 Copper Stone Spirits next to the rock", function()
     boot()
@@ -185,6 +245,134 @@ test("real entrypoint shows the requested 248 Copper Stone Spirits next to the r
     value.value = 247
     hover({entry})
     equal(entry.overrideText, "Mine <col=ffff00>Copper rock</col> <col=80d8ff>(247 Copper Stone Spirits)</col>")
+end)
+
+test("hover displays the rock and count without a right click and allows mining through it", function()
+    boot()
+    nativeBag = {{obj={id=44797}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    hover({rock("Copper rock")})
+    equal(menuOpen, false)
+    equal(overlay().hidden, false)
+    equal(overlayLabel().content, "Copper rock (17 Copper Stone Spirits)")
+    equal(overlay().clickthrough, true)
+    for _, child in ipairs(overlay().children) do equal(child.clickthrough, true) end
+    nativeValues[copper.varName].value = 16
+    hover({rock("Copper rock")})
+    equal(overlayLabel().content, "Copper rock (16 Copper Stone Spirits)")
+end)
+
+test("number only setting changes both hover and menu to Copper rock (17)", function()
+    boot()
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local button = clickSetting("Number only")
+    equal(button.label, "Number only: On")
+    equal(saved.numberOnly, true)
+    local entry = rock("Copper rock")
+    hover({entry})
+    equal(overlayLabel().content, "Copper rock (17)")
+    equal(entry.overrideText, "Mine <col=ffff00>Copper rock</col> <col=80d8ff>(17)</col>")
+    nativeValues[copper.varName].value = 0
+    hover({entry})
+    equal(overlayLabel().content, "Copper rock (0)")
+    nativeValues[copper.varName] = nil
+    hover({entry})
+    equal(overlayLabel().content, "Copper rock (?)")
+end)
+
+test("hover toggle hides the label while preserving the context menu count", function()
+    boot()
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    hover({rock("Copper rock")})
+    local button = clickSetting("Show count on hover")
+    equal(button.label, "Show count on hover: Off")
+    equal(overlay().hidden, true)
+    equal(saved.showHoverCount, false)
+    local entry = rock("Copper rock")
+    hover({entry})
+    equal(overlay().hidden, true)
+    assert(entry.overrideText:find("17 Copper Stone Spirits", 1, true))
+end)
+
+test("both display settings survive plugin reload", function()
+    boot({showHoverCount=false, numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local entry = rock("Copper rock")
+    hover({entry})
+    equal(overlay(), nil)
+    assert(entry.overrideText:find("(17)", 1, true))
+    clickSetting("Show count on hover")
+    hover({entry})
+    equal(overlayLabel().content, "Copper rock (17)")
+    local persisted = saved
+    PluginShutdown()
+    boot(persisted)
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    hover({rock("Copper rock")})
+    equal(overlayLabel().content, "Copper rock (17)")
+end)
+
+test("hover hides over unrelated UI, empty menus, right-click menus and lost focus", function()
+    boot()
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local entry = rock("Copper rock")
+    hover({entry})
+    hover({entry, {actionEntryType=1}})
+    equal(overlay().hidden, true)
+    hover({entry})
+    hover({})
+    equal(overlay().hidden, true)
+    hover({entry})
+    menuOpen = true
+    handlers.MiniMenuOpened({})
+    equal(overlay().hidden, true)
+    hover({entry})
+    equal(overlay().hidden, true)
+    menuOpen = false
+    hover({entry})
+    handlers.WindowFocusChanged({hasFocus=false})
+    equal(overlay().hidden, true)
+    hover({entry})
+    equal(overlay().hidden, true)
+    handlers.WindowFocusChanged({hasFocus=true})
+    hover({entry})
+    equal(overlay().hidden, false)
+end)
+
+test("hover follows the mouse, stays on screen and handles interface scaling", function()
+    boot({numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local entry = rock("Copper rock")
+    game.options.InterfaceScale.setting = 150
+    mouse = {x=300, y=300}
+    hover({entry})
+    equal(overlay().x, 216)
+    equal(overlay().y, 228)
+    mouse = {x=1530, y=1140}
+    hover({entry})
+    assert(overlay().x >= 0 and overlay().x + overlay().width <= uiRoot.width)
+    assert(overlay().y >= 0 and overlay().y + overlay().height <= uiRoot.height)
+end)
+
+test("game state changes discard old overlay components and build on the current interface", function()
+    boot()
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local entry = rock("Copper rock")
+    hover({entry})
+    local previous = overlay()
+    handlers.GameStateChanged({})
+    equal(previous.destroyed, true)
+    hover({entry})
+    assert(overlay() ~= previous)
+    PluginShutdown()
+    equal(overlay(), nil)
 end)
 
 test("real entrypoint reads all 17 spirits using the actual dump bindings", function()
@@ -246,6 +434,7 @@ test("real entrypoint updates after deposit and resumes on withdrawal", function
     handlers.InventoryUpdated({inv={id=93}})
     hover({entry})
     equal(entry.overrideText, "")
+    equal(overlay().hidden, true)
     entry = rock("Copper rock")
     hover({entry})
     equal(entry.overrideText, nil)
