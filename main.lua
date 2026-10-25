@@ -91,4 +91,4 @@ function PluginShutdown()
     hover:clear()
 end
 
-log("Stone Spirit Spy 0.3.7 diagnostic build loaded. Carry an ore box and hover over a rock.")
+log("Stone Spirit Spy 0.3.8 loaded. Carry an ore box and hover over a rock.")

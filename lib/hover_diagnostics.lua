@@ -41,7 +41,7 @@ function M.new(output)
         capture = {remaining=5, frames=0, calls=0, panel=1, component=-1,
             static=0, dynamic=0, collections=0, truncated=0, pending={},
             menus={}, states={}, labels={}, samples={}, panels={}, layout={}, traces=0, seen={}}
-        output(PREFIX .. "Stone Spirit Spy 0.3.7 recording for 5 seconds. Close settings and hover Copper rock.")
+        output(PREFIX .. "Stone Spirit Spy 0.3.8 recording for 5 seconds. Close settings and hover Copper rock.")
     end
 
     function self:menu(entries, context)
@@ -169,7 +169,7 @@ function M.new(output)
         end
         local component = panelID and ui.Interfaces:GetComponent(panelID, staticID)
         capture.static = capture.static + 1
-        if panelName == "TOPLEVEL_V2" and (staticID == 892 or staticID == 902) then
+        if panelName == "TOPLEVEL_V2" and (staticID == 892 or staticID == 899 or staticID == 902) then
             local key = "candidate" .. staticID
             if not capture.seen[key] then
                 capture.seen[key] = true
@@ -193,7 +193,7 @@ function M.new(output)
             capture.remaining = capture.remaining - math.min(delta, 0.25)
         end
         if capture.remaining > 0 and capture.frames < 600 then return end
-        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.7 frames=" .. capture.frames .. " UI lookups=" .. capture.calls,
+        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.8 frames=" .. capture.frames .. " UI lookups=" .. capture.calls,
             PREFIX .. "coverage: static=" .. capture.static .. " dynamic=" .. capture.dynamic
                 .. " collections=" .. capture.collections .. " capped=" .. capture.truncated
                 .. " pending=" .. #capture.pending}

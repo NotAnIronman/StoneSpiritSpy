@@ -68,17 +68,18 @@ function M.new()
                 state = "native TOPLEVEL_V2 label 902/0:0 hidden"
                 restore(); return
             end
-            -- Cache hierarchy: label -> 902 -> 899 -> 895 -> outer frame 892.
-            -- Its backgrounds inherit the frame width through these layers.
-            local box = ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 892)
-            local ancestor, insideFrame = label.parent, false
+            -- Live 0.3.7 capture: label -> 902 -> 901 -> frame 899 -> viewport 896.
+            -- Frame 899 is fixed-width; its inner layers inherit that width.
+            local box = ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 899)
+            local ancestor, insideFrame, parentGrowth = label.parent, false, 1
             for _=1,8 do
                 if not ancestor then break end
-                if ancestor.staticID == 892 then insideFrame = true; break end
+                if ancestor.staticID == 899 then insideFrame = true; break end
+                parentGrowth = parentGrowth * ancestor.size.widthParentPc
                 ancestor = ancestor.parent
             end
             if not box or box.type ~= ui.ComponentType.LAYER or not insideFrame then
-                state = "native hover frame 892 invalid: found=" .. tostring(box ~= nil)
+                state = "native hover frame 899 invalid: found=" .. tostring(box ~= nil)
                     .. " type=" .. tostring(box and box.type) .. " expected=" .. tostring(ui.ComponentType.LAYER)
                     .. " ancestor=" .. tostring(insideFrame)
                 restore(); return
@@ -98,7 +99,7 @@ function M.new()
             if not applied or (current ~= applied.rendered and current ~= applied.original) then
                 restore()
                 applied = {original=original, labelSize=sizeOf(label), boxSize=sizeOf(box),
-                    parentWidth=label.parent.width}
+                    parentGrowth=parentGrowth}
             end
             applied.label, applied.box, applied.rendered = label, box, rendered
             local font = config.Font.FromID(label.font)
@@ -107,9 +108,9 @@ function M.new()
             local boxSize, labelSize = applied.boxSize, applied.labelSize
             applied.renderedBoxSize = {boxSize[1] + extraWidth, boxSize[2], boxSize[3], boxSize[4]}
             setSize(box, applied.renderedBoxSize)
-            -- A relative label already grows with its parent; add only the
-            -- remaining width, so it stays centred inside the larger frame.
-            local inheritedWidth = (label.parent.width - applied.parentWidth) * labelSize[3]
+            -- Use sizing ratios rather than computed widths: native layout may
+            -- be recalculated after Draw. A relative label already inherits growth.
+            local inheritedWidth = extraWidth * applied.parentGrowth * labelSize[3]
             applied.renderedLabelSize = {math.ceil(labelSize[1] + extraWidth - inheritedWidth),
                 labelSize[2], labelSize[3], labelSize[4]}
             setSize(label, applied.renderedLabelSize)

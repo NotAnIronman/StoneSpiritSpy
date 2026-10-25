@@ -231,32 +231,36 @@ local function boot(preferences)
         return control
     end
     uiRoot = component("Host")
-    uiRoot.width, uiRoot.height, uiRoot.xyGlobal = 1024, 768, {x=0,y=0}
+    uiRoot.width, uiRoot.height, uiRoot.xyGlobal = 1920, 1080, {x=0,y=0}
+    uiRoot.staticID, uiRoot.interfaceID, uiRoot.type = 896, 1477, 20
     settingsHost = component("SettingsHost")
     settingsHost.width, settingsHost.height = 420, 300
     nativeTooltipBox = component("NativeTooltipBox", uiRoot)
-    nativeTooltipBox:SetSize(240, 30)
-    nativeTooltipBox.staticID, nativeTooltipBox.type = 892, 0
+    nativeTooltipBox:SetSize(135, 54)
+    nativeTooltipBox.staticID, nativeTooltipBox.type = 899, 20
     local layer = nativeTooltipBox
-    local layers = {[892]=nativeTooltipBox}
-    for _, staticID in ipairs({895,899,902}) do
+    local unrelated = component("OtherFullscreenLayer", uiRoot)
+    unrelated:SetSize(0, 0, 1, 1)
+    unrelated.staticID, unrelated.type = 892, 20
+    local layers = {[892]=unrelated, [896]=uiRoot, [899]=nativeTooltipBox}
+    for _, staticID in ipairs({901,902}) do
         layer = component("NativeTooltipLayer", layer)
-        layer.staticID, layer.type = staticID, 0
-        layer:SetSize(staticID == 895 and -16 or 0, 0, 1, 1)
+        layer.staticID, layer.type = staticID, 20
+        layer:SetSize(staticID == 901 and -8 or -10, staticID == 901 and -8 or -4, 1, 1)
         layers[staticID] = layer
     end
     nativeTooltip = component("NativeTooltip", layer)
-    nativeTooltip:SetSize(224, 22)
-    nativeTooltip.type, nativeTooltip.font, nativeTooltip.visibleGlobal = 4, 1, true
+    nativeTooltip:SetSize(0, 18, 1, 0)
+    nativeTooltip.type, nativeTooltip.font, nativeTooltip.visibleGlobal = 2, 1, true
     nativeTooltip.content = "Mine <col=ffff00>Copper rock</col>"
     nativeTooltip.staticID, nativeTooltip.categoryID, nativeTooltip.dynamicID = 902, 0, 0
     function layer:IterateDynamicComponents(callback)
         callback(nativeTooltip, nativeTooltip.visibleGlobal)
     end
     -- Replay the layout discovered in HoverReport.txt from client 951-1.
-    nativePanels[1486] = {[15]={type=4, content="Tooltip text", visibleGlobal=true}}
+    nativePanels[1486] = {[15]={type=2, content="Tooltip text", visibleGlobal=true}}
     nativePanels[1477] = layers
-    ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4, LAYER=0},
+    ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=2, LAYER=20},
         TextContentVisibilityMode={VISIBLE=0}, InputFieldFilterMode={NONE=0},
         Interfaces={GetComponent=function(_, interfaceID, componentID, categoryID, dynamicID)
         uiLookups = uiLookups + 1
@@ -299,8 +303,8 @@ local function hover(entries)
     nativeTooltip.visibleGlobal = top ~= nil and top.fullText ~= nil and not menuOpen
     if top and top.fullText then
         nativeTooltip.content = top.fullText
-        nativeTooltip:SetSize(224, 22)
-        nativeTooltipBox:SetSize(240, 30)
+        nativeTooltip:SetSize(0, 18, 1, 0)
+        nativeTooltipBox:SetSize(135, 54)
     end
     handlers.Draw({})
 end
@@ -357,22 +361,22 @@ test("hover frame and relative label grow together while keeping native padding"
     entry.fullText = "Mine Copper rock"
     handlers.MiniMenuReady({miniMenu={entries={entry}}})
     nativeTooltip.content = entry.fullText
-    nativeTooltip:SetSize(0, 22, 1, 0)
+    nativeTooltip:SetSize(0, 18, 1, 0)
     local widgetsBefore = #widgets
     handlers.Draw({})
     equal(nativeTooltip.content, "Mine Copper rock <col=80d8ff>(15)</col>")
     local extra = config.Font.FromID(1):GetStringWidth(" (15)", false)
-    equal(nativeTooltipBox.width, 240 + extra)
-    equal(nativeTooltip.width, 224 + extra)
-    equal(nativeTooltipBox.width - nativeTooltip.width, 16)
-    equal(nativeTooltipBox.height, 30)
+    equal(nativeTooltipBox.width, 135 + extra)
+    equal(nativeTooltip.width, 117 + extra)
+    equal(nativeTooltipBox.width - nativeTooltip.width, 18)
+    equal(nativeTooltipBox.height, 54)
     equal(nativeTooltip.size.widthParentPc, 1)
     equal(#widgets, widgetsBefore)
     PluginShutdown()
     equal(nativeTooltip.content, "Mine Copper rock")
     equal(nativeTooltip.size.width, 0)
     equal(nativeTooltip.size.widthParentPc, 1)
-    equal(nativeTooltipBox.width, 240)
+    equal(nativeTooltipBox.width, 135)
 end)
 
 test("native dynamic label removal, type change and recreation recover without stale counts", function()
@@ -388,13 +392,13 @@ test("native dynamic label removal, type change and recreation recover without s
     nativeTooltip.type = 0
     handlers.Draw({})
     equal(nativeTooltip.content, entry.fullText)
-    nativeTooltip.type = 4
+    nativeTooltip.type = 2
     handlers.Draw({})
     equal(nativeHasCount(), true)
     local old = nativeTooltip
-    nativeTooltip = {type=4, content="Mine Copper rock", visibleGlobal=true, font=1, children={},
-        size={width=150, height=22, widthParentPc=0, heightParentPc=0},
-        width=150, height=22, parent=old.parent, SetSize=old.SetSize}
+    nativeTooltip = {type=2, content="Mine Copper rock", visibleGlobal=true, font=1, children={},
+        size={width=150, height=18, widthParentPc=0, heightParentPc=0},
+        width=150, height=18, parent=old.parent, SetSize=old.SetSize}
     handlers.Draw({})
     equal(old.content, entry.fullText)
     equal(nativeTooltip.content, "Mine Copper rock <col=80d8ff>(17)</col>")
@@ -412,11 +416,12 @@ test("full and short counts resize the native frame from its original width", fu
     local font = config.Font.FromID(1)
     local function checkWidth()
         local extra = font:GetStringWidth(nativeTooltip.content, false) - font:GetStringWidth(entry.fullText, false)
-        equal(nativeTooltipBox.width, 240 + extra)
-        equal(nativeTooltip.width, 224 + extra)
-        for _, staticID in ipairs({895,899,902}) do
-            equal(nativePanels[1477][staticID].width, 224 + extra)
-        end
+        equal(nativeTooltipBox.width, 135 + extra)
+        equal(nativeTooltip.width, 117 + extra)
+        equal(nativePanels[1477][901].width, 127 + extra)
+        equal(nativePanels[1477][902].width, 117 + extra)
+        equal(nativePanels[1477][892].width, 1920)
+        equal(nativePanels[1477][896].width, 1920)
         assert(font:GetStringWidth(nativeTooltip.content, false) <= nativeTooltip.width)
     end
     checkWidth()
@@ -432,8 +437,8 @@ test("full and short counts resize the native frame from its original width", fu
     hover({entry})
     checkWidth()
     PluginShutdown()
-    equal(nativeTooltipBox.width, 240)
-    equal(nativeTooltip.width, 224)
+    equal(nativeTooltipBox.width, 135)
+    equal(nativeTooltip.width, 117)
 end)
 
 test("native frame reset is repaired even when the annotated text remains", function()
@@ -442,15 +447,39 @@ test("native frame reset is repaired even when the annotated text remains", func
     nativeValues[copper.varName] = field(copper, 17)
     hover({rock("Copper rock")})
     local frameWidth, labelWidth = nativeTooltipBox.width, nativeTooltip.width
-    nativeTooltipBox:SetSize(240, 30)
-    nativeTooltip:SetSize(224, 22)
+    nativeTooltipBox:SetSize(135, 54)
+    nativeTooltip:SetSize(117, 18)
     equal(nativeHasCount(), true)
     handlers.Draw({})
     equal(nativeTooltipBox.width, frameWidth)
     equal(nativeTooltip.width, labelWidth)
     handlers.MiniMenuReady({miniMenu={entries={}}})
-    equal(nativeTooltipBox.width, 240)
-    equal(nativeTooltip.width, 224)
+    equal(nativeTooltipBox.width, 135)
+    equal(nativeTooltip.width, 117)
+end)
+
+test("relative label does not grow twice when native layout is deferred", function()
+    boot({numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 15)
+    local resize = nativeTooltipBox.SetSize
+    local pending
+    function nativeTooltipBox:SetSize(w, h, wp, hp)
+        self.size = {width=w, height=h, widthParentPc=wp, heightParentPc=hp}
+        pending = {w,h,wp,hp}
+    end
+    handlers.MiniMenuReady({miniMenu={entries={rock("Copper rock")}}})
+    handlers.Draw({})
+    assert(pending, "The frame resize should be queued")
+    local extra = config.Font.FromID(1):GetStringWidth(" (15)", false)
+    resize(nativeTooltipBox, table.unpack(pending))
+    equal(nativeTooltipBox.width, 135 + extra)
+    equal(nativeTooltip.width, 117 + extra)
+    equal(nativeTooltip.size.width, 0)
+    nativeTooltipBox.SetSize = resize
+    PluginShutdown()
+    equal(nativeTooltipBox.width, 135)
+    equal(nativeTooltip.width, 117)
 end)
 
 test("tier matching hides unsupported counts from both native hover and menu", function()
@@ -552,8 +581,8 @@ test("hover toggle restores native text and size while retaining the menu count"
     hover({rock("Copper rock")})
     equal(clickSetting("Show count on hover").label, "Show count on hover: Off")
     equal(nativeTooltip.content, "Mine <col=ffff00>Copper rock</col>")
-    equal(nativeTooltipBox.width, 240)
-    equal(nativeTooltip.width, 224)
+    equal(nativeTooltipBox.width, 135)
+    equal(nativeTooltip.width, 117)
     equal(nativeTooltip.visibleGlobal, true)
     local entry = rock("Copper rock")
     hover({entry})
@@ -616,17 +645,17 @@ test("repeated Draws and native text rewrites do not duplicate counts or expand 
     local entry = rock("Copper rock")
     hover({entry})
     local width = nativeTooltip.width
-    assert(width > 224)
+    assert(width > 117)
     for _=1,5 do handlers.Draw({}) end
     equal(nativeTooltip.width, width)
     nativeTooltip.content = entry.fullText
     handlers.Draw({})
     equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
     equal(nativeTooltip.width, width)
-    assert(nativeTooltipBox.width > 240)
+    assert(nativeTooltipBox.width > 135)
     PluginShutdown()
-    equal(nativeTooltipBox.width, 240)
-    equal(nativeTooltip.width, 224)
+    equal(nativeTooltipBox.width, 135)
+    equal(nativeTooltip.width, 117)
     equal(nativeTooltip.content, entry.fullText)
     equal(nativeTooltip.destroyed, nil)
 end)
@@ -657,7 +686,7 @@ test("game state changes restore the native tooltip without destroying its compo
     hover({entry})
     handlers.GameStateChanged({})
     equal(nativeTooltip.content, entry.fullText)
-    equal(nativeTooltipBox.width, 240)
+    equal(nativeTooltipBox.width, 135)
     equal(nativeTooltip.destroyed, nil)
     hover({entry})
     equal(nativeHasCount(), true)
@@ -764,11 +793,11 @@ end)
 test("diagnostic follows nested dynamic labels while static tooltip holds reported placeholder", function()
     boot()
     nativePanels[1486][15].content = "Tooltip text"
-    local label = {type=4, content="<col=00ffff>Copper rock", categoryID=2, dynamicID=7,
+    local label = {type=2, content="<col=00ffff>Copper rock", categoryID=2, dynamicID=7,
         visibleGlobal=true, isRestricted=false, parent={staticID=3}}
-    local nested = {type=0, categoryID=0, dynamicID=1,
+    local nested = {type=20, categoryID=0, dynamicID=1,
         IterateDynamicComponents=function(_, callback) callback(label, true) end}
-    local root = {type=0, IterateDynamicComponents=function(_, callback) callback(nested, true) end}
+    local root = {type=20, IterateDynamicComponents=function(_, callback) callback(nested, true) end}
     nativePanels[1489] = {[3]=root}
     local recorder = require("lib/hover_diagnostics").new(function() end)
     recorder:start()
@@ -790,10 +819,10 @@ test("diagnostic caps large dynamic collections and reports stale children", fun
     boot()
     local visited = 0
     local stale = setmetatable({}, {__index=function() error("stale native child") end})
-    nativePanels[1486][0] = {type=0, IterateDynamicComponents=function(_, callback)
+    nativePanels[1486][0] = {type=20, IterateDynamicComponents=function(_, callback)
         for i=1,1000 do
             visited=visited+1
-            if callback(i == 1 and stale or {type=4, content="Copper rock"}, true) then break end
+            if callback(i == 1 and stale or {type=2, content="Copper rock"}, true) then break end
         end
     end}
     local recorder = require("lib/hover_diagnostics").new(function() end)
@@ -810,7 +839,7 @@ end)
 test("diagnostic captures live parent sizes when the assumed frame is absent", function()
     boot()
     nativePanels[1477][892] = nil
-    nativePanels[1477][902].parent = {staticID=777, interfaceID=1477, type=0,
+    nativePanels[1477][902].parent = {staticID=777, interfaceID=1477, type=20,
         width=138, height=24, visibleGlobal=true,
         size={width=138, height=24, widthParentPc=0, heightParentPc=0}}
     nativeTooltip.content = "Mine Copper rock"

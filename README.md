@@ -14,12 +14,13 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.3.7** is a diagnostic build for the unresolved hover sizing issue.
-The 0.3.5 text update was confirmed in game but overflowed its box. The 0.3.6
-report showed that frame `892` could not be verified, causing the annotation to be
-skipped. The older cache hierarchy is therefore not sufficient to identify the
-live frame. This build captures the actual label parent chain and dimensions;
-it does not claim to fix hover sizing.
+Version **0.3.8** resizes hover frame `899`, identified by the live 0.3.7 capture.
+The captured chain is label `902/0:0` → `902` → `901` → frame `899` → viewport `896`.
+The native frame was `135 × 54`, with a `117 × 18` label and 18 pixels of horizontal
+padding. The previous frame `892` was an unrelated full-screen layer.
+Local regression checks now use this captured hierarchy and verify both text and
+frame growth, including deferred native layout. The visual result still needs an
+in-game check.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -65,9 +66,9 @@ hover frame and text area together. It preserves native padding and accounts for
 labels that already grow with their parents. It restores the original text and
 dimensions when the count no longer applies.
 
-That resize attempt currently requires frame `892` to be a layer in the label's
-parent chain. The supplied live report fails this check, so hover annotations are
-skipped in that scenario. Right-click counts remain available.
+The resize requires frame `899` to be a layer in the label's parent chain. Both
+the frame and text widths are based on the original native sizes, so repeated
+updates do not accumulate extra width. Full-screen layers are not resized.
 
 ## Record the missing hover count
 
@@ -89,7 +90,7 @@ The report includes the selected menu target, active display settings, the nativ
 hover update result, and rock-related text found in four candidate UI panels.
 Its `layout` section records the live rock label and up to twelve parent levels,
 including component IDs, types, dimensions, relative sizing, positions, and static
-parent references. Separate snapshots check candidates `892` and `902`. These
+parent references. Separate snapshots check candidates `892`, `899`, and `902`. These
 reads distinguish the actual client hierarchy from the older cache layout without
 changing candidate components. At most two label paths are traced per recording;
 cycles, missing parents, and unavailable properties are handled explicitly.
@@ -176,14 +177,14 @@ to append menu labels during `MiniMenuReady`. The highest-priority entry supplie
 the pending native hover annotation. `Draw` retrieves the dynamic label with
 `ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 902, 0, 0)` and appends the
 count only when the label is visible, has the expected type, and its text matches
-the current rock. This address comes from the supplied 0.3.4 report in
+the current rock. This address comes from the supplied live reports in
 `HoverReport.txt`, captured on client 951-1. The label is resolved each Draw so
 missing or recreated native children do not leave the plugin holding a stale target.
-The older cache layout places this label inside layers `902`, `899`, and `895`, under
-outer frame `892`; the 0.3.6 live report did not confirm that relationship.
-The plugin requires that ancestor before attempting to resize frame `892`.
-Its background layers inherit the new width. Label sizing accounts for inherited
-parent growth so a relative label does not widen twice. Repeated Draws set sizes
+The 0.3.7 live capture identifies layers `902` and `901` inside fixed-width frame
+`899`, under full-screen viewport `896`. The plugin verifies frame `899` as an
+ancestor before resizing it. Its background layers inherit the new width. Label
+sizing uses the recorded parent sizing ratios, so relative labels do not widen
+twice even if native layout is recalculated after Draw. Repeated Draws set sizes
 from the saved originals, including when the client resets the frame dimensions.
 The recorder also inspects dynamic components using the documented
 [`IterateDynamicComponents`](https://developer.runescape.com/rs/ui/component_collection.html)
