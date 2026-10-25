@@ -177,9 +177,11 @@ end)
 
 local handlers, logs, available, nativeBag, nativeValues, widgets, uiRoot, settingsHost, mouse, menuOpen, saved
 local nativeTooltip, nativeTooltipBox
+local nativePanels, uiLookups
 local function boot(preferences)
     handlers, logs, available, nativeBag, nativeValues = {}, {}, true, {}, {}
     widgets, mouse, menuOpen, saved = {}, {x=200, y=200}, false, preferences or {}
+    nativePanels, uiLookups = {}, 0
     Event = {}
     for _, name in ipairs({"MiniMenuReady", "InventoryAdded", "InventoryUpdated", "InventoryRemoved", "GameStateChanged",
         "MiniMenuOpened", "WindowFocusChanged", "SettingsLayerReady", "Draw"}) do
@@ -197,7 +199,8 @@ local function boot(preferences)
     }
     game = {options={InterfaceScale={setting=100}}}
     id = {Font={MUSEO_SANS_15PT_REGULAR=1}, StyleSheet={BUTTON_DEFAULT=2},
-        Interface={TEXT_TOOLTIP=1486}, Component={TOPLEVEL_V2__PLUGIN_BUILD_LAYER_TOP=3}}
+        Interface={TEXT_TOOLTIP=1486, TOPLEVEL_V2_HOVER_TARGET=1489, MINIMENU=1322, TOPLEVEL_V2=1477},
+        Component={TOPLEVEL_V2__PLUGIN_BUILD_LAYER_TOP=3}}
     local function component(kind, parent)
         local control = {kind=kind, parent=parent, children={}, hooks={}, hidden=false, text={}}
         function control:SetPos(x, y) self.x, self.y=x, y end
@@ -224,12 +227,14 @@ local function boot(preferences)
     nativeTooltip:SetSize(224, 22)
     nativeTooltip.type, nativeTooltip.font, nativeTooltip.visibleGlobal = 4, 1, true
     nativeTooltip.content = "Mine <col=ffff00>Copper rock</col>"
+    nativePanels[1486] = {[15]=nativeTooltip, [1]=nativeTooltipBox}
     ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4}, Interfaces={GetComponent=function(_, interfaceID, componentID)
+        uiLookups = uiLookups + 1
         if interfaceID == 3 then return uiRoot end
-        equal(interfaceID, 1486)
-        if componentID == 15 then return nativeTooltip end
-        if componentID == 1 then return nativeTooltipBox end
-        error("Unexpected tooltip component")
+        return nativePanels[interfaceID] and nativePanels[interfaceID][componentID]
+    end, GetInterface=function(_, interfaceID)
+        uiLookups = uiLookups + 1
+        if nativePanels[interfaceID] then return {id=interfaceID} end
     end}}
     for _, kind in ipairs({"Layer", "Rectangle", "Text", "Button"}) do
         ui[kind] = {new=function(parent) return component(kind, parent) end}
@@ -584,6 +589,64 @@ test("real entrypoint updates after deposit and resumes on withdrawal", function
     entry = rock("Copper rock")
     hover({entry})
     assert(entry.overrideText:find("248 Copper Stone Spirits", 1, true))
+end)
+
+test("diagnostic recorder finds an alternative rock label without modifying it", function()
+    boot()
+    nativeTooltip.visibleGlobal = false
+    local alternative = {type=ui.ComponentType.LABEL, content="Copper rock", visibleGlobal=true,
+        isRestricted=false, parent={staticID=7}}
+    nativePanels[1489] = {[13]=alternative}
+    local lines = {}
+    local recorder = require("lib/hover_diagnostics").new(function(line) lines[#lines+1]=line end)
+    recorder:draw(1, "idle")
+    equal(uiLookups, 0)
+    recorder:start()
+    for _=1,50 do
+        local before = uiLookups
+        recorder:draw(0.1, "native TEXT_TOOLTIP label 15 hidden")
+        assert(uiLookups - before <= 16)
+    end
+    if recorder:active() then recorder:draw(0.1, "native TEXT_TOOLTIP label 15 hidden") end
+    equal(recorder:active(), false)
+    equal(alternative.content, "Copper rock")
+    local report = table.concat(lines, "\n")
+    assert(report:find("TOPLEVEL_V2_HOVER_TARGET static=13", 1, true))
+    assert(report:find("parentStatic=7", 1, true))
+    assert(report:find("REPORT END", 1, true))
+    local before = uiLookups
+    recorder:draw(1, "idle")
+    equal(uiLookups, before)
+end)
+
+test("settings diagnostic records actual target and options without saving a new setting", function()
+    boot({showHoverCount=false})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local before = #widgets
+    clickSetting("Record hover diagnostics")
+    equal(saved.limitToBoxTier, nil)
+    handlers.MiniMenuReady({miniMenu={entries={rock("Copper rock")}}})
+    for _=1,21 do handlers.Draw({timeDeltaSecs=0.25}) end
+    local report = table.concat(logs, "\n")
+    assert(report:find("enabled=false", 1, true))
+    assert(report:find("hasBox=true", 1, true))
+    assert(report:find("topSubject=Copper rock", 1, true))
+    assert(report:find("REPORT END", 1, true))
+    local after = #widgets
+    handlers.Draw({timeDeltaSecs=1})
+    equal(#widgets, after)
+end)
+
+test("diagnostic scan tolerates unavailable panel names and terminates", function()
+    boot()
+    id.Interface.TOPLEVEL_V2_HOVER_TARGET = nil
+    local lines = {}
+    local recorder = require("lib/hover_diagnostics").new(function(line) lines[#lines+1]=line end)
+    recorder:start()
+    for _=1,600 do recorder:draw(nil, "no hover target") end
+    equal(recorder:active(), false)
+    assert(table.concat(lines, "\n"):find("REPORT END", 1, true))
 end)
 
 test("real entrypoint has no Logic callback and unsubscribes on shutdown", function()

@@ -1,6 +1,6 @@
 local M = {}
 
-function M.new(database, changed)
+function M.new(database, changed, recordDiagnostics)
     local self = {
         showHoverCount = database:GetBool("showHoverCount") ~= false,
         numberOnly = database:GetBool("numberOnly") == true,
@@ -38,11 +38,22 @@ function M.new(database, changed)
             end)
         end
 
+        local record = ui.Button.new(parent)
+        record:SetPos(12, 168)
+        record:SetSize(-24, 32, 1, 0)
+        record.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
+        record.text.font = id.Font.MUSEO_SANS_15PT_REGULAR
+        record.label = "Record hover diagnostics (5 seconds)"
+        record:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
+            recordDiagnostics()
+            record.label = "Recording: close settings and hover a rock"
+        end)
+
         local hint = ui.Text.new(parent)
-        hint:SetPos(12, 168)
-        hint:SetSize(-24, 96, 1, 0)
+        hint:SetPos(12, 210)
+        hint:SetSize(-24, 90, 1, 0)
         hint.font, hint.rgba, hint.clickthrough = id.Font.MUSEO_SANS_15PT_REGULAR, 0xBAC8D4FF, true
-        hint.content = "Hover count updates the game's existing hover box.<br>Number only shows Copper rock (17).<br>Tier matching uses your highest-tier carried box."
+        hint.content = "Tier matching uses your highest-tier carried box.<br>To diagnose hover text, record then hover Copper rock.<br>Copy the SSS-HOVER report from the developer console."
     end
 
     return self

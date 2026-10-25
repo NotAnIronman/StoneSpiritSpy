@@ -14,8 +14,8 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.3.1** updates the existing native hover box and removes the separate
-floating label. The number-only and carried-box tier settings apply to both menus.
+Version **0.3.2** is a diagnostic build for missing native hover counts. It adds a
+short recorder; a working native hover fix has not yet been confirmed in game.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -58,6 +58,23 @@ Settings are saved immediately and restored when the plugin reloads.
 The client keeps control of the hover box's position, visibility, and styling.
 The plugin updates its text and widens the existing box to fit the count. It restores
 the original text and dimensions when the count no longer applies.
+
+## Record the missing hover count
+
+1. Install this build and reload it with `prf`, then `prl StoneSpiritSpy`.
+2. Carry an ore box and turn **Show count on hover** on.
+3. Open the plugin's gear settings and click **Record hover diagnostics (5 seconds)**.
+4. Close settings and hold the cursor over a Copper rock for five seconds.
+   Keep the right-click menu closed.
+5. Open the developer console. Copy the lines marked `[SSS-HOVER]`, from
+   `REPORT BEGIN` through `REPORT END`. Share them in the development chat or save
+   them as `HoverReport.txt` in this repository.
+
+The report includes the selected menu target, active display settings, the native
+hover update result, and rock-related text found in four candidate UI panels.
+The recorder reads candidate components only while recording, with at most sixteen
+lookups per Draw. Its scan does not modify candidate labels. This gives live evidence
+to check the current `TEXT_TOOLTIP` assumption instead of repeating it in a test fixture.
 
 ## Check the count in game
 

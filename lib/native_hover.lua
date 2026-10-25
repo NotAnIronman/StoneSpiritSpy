@@ -13,6 +13,7 @@ end
 function M.new()
     local self = {}
     local name, suffix, applied, lastError
+    local state = "no hover target"
 
     local function restore()
         if applied then
@@ -29,7 +30,12 @@ function M.new()
 
     function self:clear()
         name, suffix = nil, nil
+        state = "no hover target"
         restore()
+    end
+
+    function self:diagnosticState()
+        return "target=" .. tostring(name) .. " | " .. state
     end
 
     function self:setTarget(rockName, countSuffix)
@@ -45,7 +51,13 @@ function M.new()
             local interfaceID = id.Interface.TEXT_TOOLTIP
             local label = ui.Interfaces:GetComponent(interfaceID, 15)
             local box = ui.Interfaces:GetComponent(interfaceID, 1)
-            if not label or not box or label.type ~= ui.ComponentType.LABEL or not label.visibleGlobal then
+            if not label then state = "native TEXT_TOOLTIP label 15 missing"; restore(); return end
+            if not box then state = "native TEXT_TOOLTIP box 1 missing"; restore(); return end
+            if label.type ~= ui.ComponentType.LABEL then
+                state = "native label has unexpected type " .. tostring(label.type); restore(); return
+            end
+            if not label.visibleGlobal then
+                state = "native TEXT_TOOLTIP label 15 hidden"
                 restore(); return
             end
             local current = label.content
@@ -54,11 +66,14 @@ function M.new()
             local first, last = plain:find(name, 1, true)
             if not first or (first > 1 and plain:sub(first - 1, first - 1):match("[%w]"))
                 or plain:sub(last + 1, last + 1):match("[%w]") then
+                state = "native label text does not match target: " .. tostring(current)
                 restore(); return
             end
 
             local rendered = original .. suffix
-            if applied and current == applied.rendered and rendered == applied.rendered then return end
+            if applied and current == applied.rendered and rendered == applied.rendered then
+                state = "native label still contains count"; return
+            end
             if not applied or (current ~= applied.rendered and current ~= applied.original) then
                 restore()
                 applied = {original=original, labelSize=sizeOf(label), boxSize=sizeOf(box),
@@ -70,8 +85,10 @@ function M.new()
             label.content = rendered
             label:SetSize(applied.labelWidth + extraWidth, applied.labelHeight)
             box:SetSize(applied.boxWidth + extraWidth, applied.boxHeight)
+            state = "native label write readback=" .. tostring(label.content == rendered)
         end)
         if not ok then
+            state = "native update error: " .. tostring(err)
             restore()
             if tostring(err) ~= lastError then
                 log("Stone Spirit Spy could not update the native hover box: " .. tostring(err))

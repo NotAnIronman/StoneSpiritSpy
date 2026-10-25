@@ -1,7 +1,9 @@
 local Catalog = require("lib/catalog")
 local Reader = require("lib/reader")
 local hover = require("lib/native_hover").new()
-local settings = require("lib/settings").new(PersistentDB, function() hover:clear() end)
+local diagnostics = require("lib/hover_diagnostics").new(log)
+local settings = require("lib/settings").new(PersistentDB, function() hover:clear() end,
+    function() diagnostics:start() end)
 local focused = true
 local reference = "stone-spirit-spy"
 local reader = Reader.new({
@@ -64,13 +66,20 @@ subscribe("MiniMenuReady", function(event)
     else
         hover:clear()
     end
+    if diagnostics:active() then
+        diagnostics:menu(entries, {enabled=settings.showHoverCount, focused=focused,
+            menuOpen=MiniMenu.IsOpen(), hasBox=hasBox, tierFilter=settings.limitToBoxTier, target=hoverName})
+    end
 end)
 
 subscribe("InventoryAdded", function(event) reader:inventoryChanged(event.inv) end)
 subscribe("InventoryUpdated", function(event) reader:inventoryChanged(event.inv) end)
 subscribe("InventoryRemoved", function(event) reader:inventoryChanged(event.inv) end)
 subscribe("GameStateChanged", function() reader:reset(); hover:clear() end)
-subscribe("Draw", function() hover:draw() end)
+subscribe("Draw", function(event)
+    hover:draw()
+    if diagnostics:active() then diagnostics:draw(event.timeDeltaSecs, hover:diagnosticState()) end
+end)
 subscribe("MiniMenuOpened", function() hover:clear() end)
 subscribe("WindowFocusChanged", function(event)
     focused = event.hasFocus
@@ -83,4 +92,4 @@ function PluginShutdown()
     hover:clear()
 end
 
-log("Stone Spirit Spy 0.3.1 loaded. Carry an ore box and hover over a rock.")
+log("Stone Spirit Spy 0.3.2 diagnostic build loaded. Carry an ore box and hover over a rock.")
