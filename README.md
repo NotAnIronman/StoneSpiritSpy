@@ -1,7 +1,7 @@
 # Stone Spirit Spy
 
 Stone Spirit Spy adds your ore-box stone spirit count to rock names in the
-right-click menu. Updating the game's existing hover box is still under investigation.
+right-click menu and targets the game's existing hover label for the same annotation.
 Enable **Number only** for a shorter label:
 
 ```text
@@ -14,10 +14,11 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.3.4** extends the selectable diagnostic report to inspect nested dynamic
-components. The supplied 0.3.3 report confirmed the Copper target and count, but
-`TEXT_TOOLTIP` component 15 contained the placeholder `Tooltip text`. The static
-scan found no rock label. This build adds evidence gathering, not a confirmed hover fix.
+Version **0.3.5** corrects the hover target using the supplied client 951-1 report:
+`TOPLEVEL_V2` component `902`, category `0`, dynamic child `0` contained
+`Mine Copper rock`. The former `TEXT_TOOLTIP` target contained only `Tooltip text`.
+The local regression now reproduces that layout and verifies the count is appended
+to the dynamic label. Visual confirmation in game is still required.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -47,8 +48,8 @@ The plugin needs no additional plugins, permissions, or network access.
 
 Open **Plugin Hub > Manage > Stone Spirit Spy** and select its gear icon.
 
-- **Show count on hover:** On by default. Enables the experimental update of the
-  existing game hover box. The missing hover count remains unresolved.
+- **Show count on hover:** On by default. Updates the existing game hover label
+  without right-clicking. Turn it off to keep counts only in the right-click menu.
 - **Number only:** Off by default. Turn it on for `Copper rock (17)` instead of
   `Copper rock (17 Copper Stone Spirits)`. This affects both displays.
 - **Match carried ore-box tier:** Off by default. Turn it on to hide hover and
@@ -58,8 +59,9 @@ Open **Plugin Hub > Manage > Stone Spirit Spy** and select its gear icon.
 
 Settings are saved immediately and restored when the plugin reloads.
 The client keeps control of the hover box's position, visibility, and styling.
-The plugin updates its text and widens the existing box to fit the count. It restores
-the original text and dimensions when the count no longer applies.
+The plugin updates the existing label's text and widens that label to fit the count,
+preserving its relative size settings and its parent's layout. It restores the
+original text and label dimensions when the count no longer applies.
 
 ## Record the missing hover count
 
@@ -159,10 +161,12 @@ local RuneScape cache snapshot `2736`, build `950.1`.
 The plugin uses [`VarType.value`](https://developer.runescape.com/rs/game/config/vartype.html)
 for current counts and [`MiniMenuEntry.overrideText`](https://developer.runescape.com/rs/game/minimenu.html)
 to append menu labels during `MiniMenuReady`. The highest-priority entry supplies
-the pending native hover annotation. `Draw` attempts to apply it to `TEXT_TOOLTIP`
-component `15` only when its visible text matches the rock name. Cache snapshot
-`2736`, build `950.1` identifies that label and box component `1`, but the supplied
-live report shows this is not the visible rock label in the reported scenario.
+the pending native hover annotation. `Draw` retrieves the dynamic label with
+`ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 902, 0, 0)` and appends the
+count only when the label is visible, has the expected type, and its text matches
+the current rock. This address comes from the supplied 0.3.4 report in
+`HoverReport.txt`, captured on client 951-1. The label is resolved each Draw so
+missing or recreated native children do not leave the plugin holding a stale target.
 The recorder also inspects dynamic components using the documented
 [`IterateDynamicComponents`](https://developer.runescape.com/rs/ui/component_collection.html)
 API. No hover UI components are created.

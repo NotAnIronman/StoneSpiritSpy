@@ -28,7 +28,7 @@ function M.new(output)
         capture = {remaining=5, frames=0, calls=0, panel=1, component=-1,
             static=0, dynamic=0, collections=0, truncated=0, pending={},
             menus={}, states={}, labels={}, samples={}, panels={}, seen={}}
-        output(PREFIX .. "Stone Spirit Spy 0.3.4 recording for 5 seconds. Close settings and hover Copper rock.")
+        output(PREFIX .. "Stone Spirit Spy 0.3.5 recording for 5 seconds. Close settings and hover Copper rock.")
     end
 
     function self:menu(entries, context)
@@ -137,7 +137,7 @@ function M.new(output)
             capture.remaining = capture.remaining - math.min(delta, 0.25)
         end
         if capture.remaining > 0 and capture.frames < 600 then return end
-        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.4 frames=" .. capture.frames .. " UI lookups=" .. capture.calls,
+        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.5 frames=" .. capture.frames .. " UI lookups=" .. capture.calls,
             PREFIX .. "coverage: static=" .. capture.static .. " dynamic=" .. capture.dynamic
                 .. " collections=" .. capture.collections .. " capped=" .. capture.truncated
                 .. " pending=" .. #capture.pending}

@@ -234,12 +234,25 @@ local function boot(preferences)
     nativeTooltip:SetSize(224, 22)
     nativeTooltip.type, nativeTooltip.font, nativeTooltip.visibleGlobal = 4, 1, true
     nativeTooltip.content = "Mine <col=ffff00>Copper rock</col>"
-    nativePanels[1486] = {[15]=nativeTooltip, [1]=nativeTooltipBox}
+    nativeTooltip.staticID, nativeTooltip.categoryID, nativeTooltip.dynamicID = 902, 0, 0
+    nativeTooltipBox.staticID, nativeTooltipBox.type = 902, 0
+    function nativeTooltipBox:IterateDynamicComponents(callback)
+        callback(nativeTooltip, nativeTooltip.visibleGlobal)
+    end
+    -- Replay the layout discovered in HoverReport.txt from client 951-1.
+    nativePanels[1486] = {[15]={type=4, content="Tooltip text", visibleGlobal=true}}
+    nativePanels[1477] = {[902]=nativeTooltipBox}
     ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4, LAYER=0},
         TextContentVisibilityMode={VISIBLE=0}, InputFieldFilterMode={NONE=0},
-        Interfaces={GetComponent=function(_, interfaceID, componentID)
+        Interfaces={GetComponent=function(_, interfaceID, componentID, categoryID, dynamicID)
         uiLookups = uiLookups + 1
         if interfaceID == 3 then return uiRoot end
+        if categoryID ~= nil or dynamicID ~= nil then
+            if interfaceID == 1477 and componentID == 902 and categoryID == 0 and dynamicID == 0 then
+                return nativePanels[1477] and nativePanels[1477][902] and nativeTooltip
+            end
+            return nil
+        end
         return nativePanels[interfaceID] and nativePanels[interfaceID][componentID]
     end, GetInterface=function(_, interfaceID)
         uiLookups = uiLookups + 1
@@ -296,7 +309,7 @@ local function expectedNative(name, count)
     return "Mine <col=ffff00>" .. name .. "</col> <col=80d8ff>(" .. count .. ")</col>"
 end
 
-test("hover edits the existing native tooltip instead of creating another box", function()
+test("hover edits the reported TOPLEVEL_V2 dynamic label and leaves the placeholder alone", function()
     boot({numberOnly=true})
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
@@ -306,6 +319,7 @@ test("hover edits the existing native tooltip instead of creating another box", 
     equal(#widgets, originalWidgets)
     equal(nativeTooltip.destroyed, nil)
     equal(nativeTooltipBox.destroyed, nil)
+    equal(nativePanels[1486][15].content, "Tooltip text")
 end)
 
 test("Draw updates native hover text generated after MiniMenuReady", function()
@@ -319,6 +333,55 @@ test("Draw updates native hover text generated after MiniMenuReady", function()
     handlers.Draw({})
     equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
     assert(entry.overrideText:find("(17)", 1, true))
+end)
+
+test("captured plain Copper hover receives count 15 without touching its parent layout", function()
+    boot({numberOnly=true, limitToBoxTier=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 15)
+    local entry = rock("Copper rock")
+    entry.fullText = "Mine Copper rock"
+    handlers.MiniMenuReady({miniMenu={entries={entry}}})
+    nativeTooltip.content = entry.fullText
+    nativeTooltip:SetSize(-16, 22, 1, 0)
+    local widgetsBefore = #widgets
+    handlers.Draw({})
+    equal(nativeTooltip.content, "Mine Copper rock <col=80d8ff>(15)</col>")
+    equal(nativeTooltipBox.width, 240)
+    equal(nativeTooltip.size.widthParentPc, 1)
+    equal(#widgets, widgetsBefore)
+    PluginShutdown()
+    equal(nativeTooltip.content, "Mine Copper rock")
+    equal(nativeTooltip.size.width, -16)
+    equal(nativeTooltip.size.widthParentPc, 1)
+end)
+
+test("native dynamic label removal, type change and recreation recover without stale counts", function()
+    boot({numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local entry = rock("Copper rock")
+    hover({entry})
+    nativePanels[1477][902] = nil
+    handlers.Draw({})
+    equal(nativeTooltip.content, entry.fullText)
+    nativePanels[1477][902] = nativeTooltipBox
+    nativeTooltip.type = 0
+    handlers.Draw({})
+    equal(nativeTooltip.content, entry.fullText)
+    nativeTooltip.type = 4
+    handlers.Draw({})
+    equal(nativeHasCount(), true)
+    local old = nativeTooltip
+    nativeTooltip = {type=4, content="Mine Copper rock", visibleGlobal=true, font=1,
+        size={width=150, height=22, widthParentPc=0, heightParentPc=0},
+        width=150, height=22, parent=nativeTooltipBox, SetSize=old.SetSize}
+    handlers.Draw({})
+    equal(old.content, entry.fullText)
+    equal(nativeTooltip.content, "Mine Copper rock <col=80d8ff>(17)</col>")
+    PluginShutdown()
+    equal(nativeTooltip.content, "Mine Copper rock")
+    equal(nativeTooltip.width, 150)
 end)
 
 test("tier matching hides unsupported counts from both native hover and menu", function()
@@ -483,14 +546,15 @@ test("repeated Draws and native text rewrites do not duplicate counts or expand 
     nativeValues[copper.varName] = field(copper, 17)
     local entry = rock("Copper rock")
     hover({entry})
-    local width = nativeTooltipBox.width
-    assert(width > 240)
+    local width = nativeTooltip.width
+    assert(width > 224)
     for _=1,5 do handlers.Draw({}) end
-    equal(nativeTooltipBox.width, width)
+    equal(nativeTooltip.width, width)
     nativeTooltip.content = entry.fullText
     handlers.Draw({})
     equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
-    equal(nativeTooltipBox.width, width)
+    equal(nativeTooltip.width, width)
+    equal(nativeTooltipBox.width, 240)
     PluginShutdown()
     equal(nativeTooltipBox.width, 240)
     equal(nativeTooltip.width, 224)
@@ -630,7 +694,7 @@ end)
 
 test("diagnostic follows nested dynamic labels while static tooltip holds reported placeholder", function()
     boot()
-    nativeTooltip.content = "Tooltip text"
+    nativePanels[1486][15].content = "Tooltip text"
     local label = {type=4, content="<col=00ffff>Copper rock", categoryID=2, dynamicID=7,
         visibleGlobal=true, isRestricted=false, parent={staticID=3}}
     local nested = {type=0, categoryID=0, dynamicID=1,
@@ -649,7 +713,7 @@ test("diagnostic follows nested dynamic labels while static tooltip holds report
     assert(report:find("text=Tooltip text", 1, true))
     assert(report:match("dynamic=[1-9]%d*"))
     assert(report:find("capped=0", 1, true))
-    equal(nativeTooltip.content, "Tooltip text")
+    equal(nativePanels[1486][15].content, "Tooltip text")
     equal(label.content, "<col=00ffff>Copper rock")
 end)
 

@@ -21,7 +21,6 @@ function M.new()
                 if applied.label.content == applied.rendered then
                     applied.label.content = applied.original
                     restoreSize(applied.label, applied.labelSize)
-                    restoreSize(applied.box, applied.boxSize)
                 end
             end)
             applied = nil
@@ -46,20 +45,18 @@ function M.new()
     function self:draw()
         if not name then return end
         local ok, err = pcall(function()
-            -- Candidate layout from cache 2736/build 950.1. The live report showed
-            -- placeholder text here, so never write unless the rock name matches.
-            local interfaceID = id.Interface.TEXT_TOOLTIP
-            local label = ui.Interfaces:GetComponent(interfaceID, 15)
-            local box = ui.Interfaces:GetComponent(interfaceID, 1)
-            if not label then state = "native TEXT_TOOLTIP label 15 missing"; restore(); return end
-            if not box then state = "native TEXT_TOOLTIP box 1 missing"; restore(); return end
+            -- Client 951-1 live report: TOPLEVEL_V2 static=902/0:0 contains
+            -- "Mine Copper rock". TEXT_TOOLTIP instead contains a placeholder.
+            local label = ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 902, 0, 0)
+            if not label then state = "native TOPLEVEL_V2 label 902/0:0 missing"; restore(); return end
             if label.type ~= ui.ComponentType.LABEL then
                 state = "native label has unexpected type " .. tostring(label.type); restore(); return
             end
             if not label.visibleGlobal then
-                state = "native TEXT_TOOLTIP label 15 hidden"
+                state = "native TOPLEVEL_V2 label 902/0:0 hidden"
                 restore(); return
             end
+            if applied and applied.label ~= label then restore() end
             local current = label.content
             local original = applied and current == applied.rendered and applied.original or current
             local plain = Catalog.normalise(original)
@@ -74,17 +71,16 @@ function M.new()
             if applied and current == applied.rendered and rendered == applied.rendered then
                 state = "native label still contains count"; return
             end
-            if not applied or (current ~= applied.rendered and current ~= applied.original) then
+            if not applied or applied.label ~= label or (current ~= applied.rendered and current ~= applied.original) then
                 restore()
-                applied = {original=original, labelSize=sizeOf(label), boxSize=sizeOf(box),
-                    labelWidth=label.width, labelHeight=label.height, boxWidth=box.width, boxHeight=box.height}
+                applied = {original=original, labelSize=sizeOf(label)}
             end
-            applied.label, applied.box, applied.rendered = label, box, rendered
+            applied.label, applied.rendered = label, rendered
             local font = config.Font.FromID(label.font)
             local extraWidth = math.max(0, font:GetStringWidth(rendered, false) - font:GetStringWidth(original, false))
             label.content = rendered
-            label:SetSize(applied.labelWidth + extraWidth, applied.labelHeight)
-            box:SetSize(applied.boxWidth + extraWidth, applied.boxHeight)
+            local size = applied.labelSize
+            label:SetSize(size[1] + extraWidth, size[2], size[3], size[4])
             state = "native label write readback=" .. tostring(label.content == rendered)
         end)
         if not ok then
