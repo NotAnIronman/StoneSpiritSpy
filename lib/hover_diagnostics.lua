@@ -9,7 +9,7 @@ end
 
 function M.new(output)
     local self = {}
-    local capture
+    local capture, lastReport
     local function remember(group, text, limit)
         if not capture.seen[group .. text] and #capture[group] < limit then
             capture.seen[group .. text] = true
@@ -19,10 +19,14 @@ function M.new(output)
 
     function self:active() return capture ~= nil end
 
+    function self:report()
+        return lastReport or "No completed report yet. Record hover diagnostics, hover a rock for five seconds, then reopen this report."
+    end
+
     function self:start()
         capture = {remaining=5, frames=0, calls=0, panel=1, component=-1,
             menus={}, states={}, labels={}, panels={}, seen={}}
-        output(PREFIX .. "Stone Spirit Spy 0.3.2 recording for 5 seconds. Close settings and hover Copper rock.")
+        output(PREFIX .. "Stone Spirit Spy 0.3.3 recording for 5 seconds. Close settings and hover Copper rock.")
     end
 
     function self:menu(entries, context)
@@ -93,12 +97,15 @@ function M.new(output)
             capture.remaining = capture.remaining - math.min(delta, 0.25)
         end
         if capture.remaining > 0 and capture.frames < 600 then return end
-        output(PREFIX .. "REPORT BEGIN frames=" .. capture.frames .. " UI lookups=" .. capture.calls)
+        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.3 frames=" .. capture.frames .. " UI lookups=" .. capture.calls}
         for _, group in ipairs({"menus", "states", "panels", "labels"}) do
-            if #capture[group] == 0 then output(PREFIX .. group .. ": none captured") end
-            for _, line in ipairs(capture[group]) do output(PREFIX .. group .. ": " .. line) end
+            if #capture[group] == 0 then lines[#lines+1] = PREFIX .. group .. ": none captured" end
+            for _, line in ipairs(capture[group]) do lines[#lines+1] = PREFIX .. group .. ": " .. line end
         end
-        output(PREFIX .. "REPORT END. Copy the SSS-HOVER lines for diagnosis.")
+        lines[#lines+1] = PREFIX .. "REPORT END"
+        lastReport = table.concat(lines, "\n")
+        for _, line in ipairs(lines) do output(line) end
+        output(PREFIX .. "Open plugin settings > Show diagnostic report to select and copy the report.")
         capture = nil
     end
 

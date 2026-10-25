@@ -14,8 +14,8 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.3.2** is a diagnostic build for missing native hover counts. It adds a
-short recorder; a working native hover fix has not yet been confirmed in game.
+Version **0.3.3** adds a selectable diagnostic report in the plugin settings.
+A working native hover fix has not yet been confirmed in game.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -66,9 +66,14 @@ the original text and dimensions when the count no longer applies.
 3. Open the plugin's gear settings and click **Record hover diagnostics (5 seconds)**.
 4. Close settings and hold the cursor over a Copper rock for five seconds.
    Keep the right-click menu closed.
-5. Open the developer console. Copy the lines marked `[SSS-HOVER]`, from
-   `REPORT BEGIN` through `REPORT END`. Share them in the development chat or save
-   them as `HoverReport.txt` in this repository.
+5. Reopen the gear settings and click **Show diagnostic report**.
+6. Click inside the report field, then press **Ctrl+A** and **Ctrl+C**.
+   Paste it into the development chat or save it as `HoverReport.txt` in this repository.
+
+The completed report stays fixed while you select and copy it. Opening the report
+again restores its captured text if the field was accidentally edited. It remains
+available until the plugin is reloaded or a new recording finishes. No console
+transcription is needed.
 
 The report includes the selected menu target, active display settings, the native
 hover update result, and rock-related text found in four candidate UI panels.

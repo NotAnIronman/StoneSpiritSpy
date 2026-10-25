@@ -2,8 +2,7 @@ local Catalog = require("lib/catalog")
 local Reader = require("lib/reader")
 local hover = require("lib/native_hover").new()
 local diagnostics = require("lib/hover_diagnostics").new(log)
-local settings = require("lib/settings").new(PersistentDB, function() hover:clear() end,
-    function() diagnostics:start() end)
+local settings = require("lib/settings").new(PersistentDB, function() hover:clear() end, diagnostics)
 local focused = true
 local reference = "stone-spirit-spy"
 local reader = Reader.new({
@@ -92,4 +91,4 @@ function PluginShutdown()
     hover:clear()
 end
 
-log("Stone Spirit Spy 0.3.2 diagnostic build loaded. Carry an ore box and hover over a rock.")
+log("Stone Spirit Spy 0.3.3 diagnostic build loaded. Carry an ore box and hover over a rock.")

@@ -198,17 +198,24 @@ local function boot(preferences)
         SetBool=function(_, key, value) saved[key]=value; return true end,
     }
     game = {options={InterfaceScale={setting=100}}}
-    id = {Font={MUSEO_SANS_15PT_REGULAR=1}, StyleSheet={BUTTON_DEFAULT=2},
+    id = {Font={MUSEO_SANS_15PT_REGULAR=1}, StyleSheet={BUTTON_DEFAULT=2, INPUT_DEFAULT=4},
         Interface={TEXT_TOOLTIP=1486, TOPLEVEL_V2_HOVER_TARGET=1489, MINIMENU=1322, TOPLEVEL_V2=1477},
         Component={TOPLEVEL_V2__PLUGIN_BUILD_LAYER_TOP=3}}
     local function component(kind, parent)
-        local control = {kind=kind, parent=parent, children={}, hooks={}, hidden=false, text={}}
+        local control = {kind=kind, parent=parent, children={}, hooks={}, hidden=false, text={}, scrollbar={}}
         function control:SetPos(x, y) self.x, self.y=x, y end
         function control:SetSize(w, h, wp, hp)
             self.width, self.height=w+(wp or 0)*(self.parent.width or 0), h+(hp or 0)*(self.parent.height or 0)
             self.size = {width=w, height=h, widthParentPc=wp or 0, heightParentPc=hp or 0}
         end
         function control:Subscribe(hook, callback) self.hooks[hook]=callback end
+        function control:Setup(visibility, filter, maxLength)
+            self.visibility, self.filterMode, self.maxLength = visibility, filter, maxLength
+        end
+        function control:DeleteAll()
+            for _, child in ipairs(self.children) do child:Destroy() end
+            self.children = {}
+        end
         function control:Destroy()
             self.destroyed, self.hidden = true, true
             for _, child in ipairs(self.children) do child:Destroy() end
@@ -228,7 +235,9 @@ local function boot(preferences)
     nativeTooltip.type, nativeTooltip.font, nativeTooltip.visibleGlobal = 4, 1, true
     nativeTooltip.content = "Mine <col=ffff00>Copper rock</col>"
     nativePanels[1486] = {[15]=nativeTooltip, [1]=nativeTooltipBox}
-    ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4}, Interfaces={GetComponent=function(_, interfaceID, componentID)
+    ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4},
+        TextContentVisibilityMode={VISIBLE=0}, InputFieldFilterMode={NONE=0},
+        Interfaces={GetComponent=function(_, interfaceID, componentID)
         uiLookups = uiLookups + 1
         if interfaceID == 3 then return uiRoot end
         return nativePanels[interfaceID] and nativePanels[interfaceID][componentID]
@@ -236,7 +245,7 @@ local function boot(preferences)
         uiLookups = uiLookups + 1
         if nativePanels[interfaceID] then return {id=interfaceID} end
     end}}
-    for _, kind in ipairs({"Layer", "Rectangle", "Text", "Button"}) do
+    for _, kind in ipairs({"Layer", "Rectangle", "Text", "Button", "InputField"}) do
         ui[kind] = {new=function(parent) return component(kind, parent) end}
     end
     Mouse = {IsAvailable=function() return true end, GetPosition=function() return mouse end}
@@ -647,6 +656,63 @@ test("diagnostic scan tolerates unavailable panel names and terminates", functio
     for _=1,600 do recorder:draw(nil, "no hover target") end
     equal(recorder:active(), false)
     assert(table.concat(lines, "\n"):find("REPORT END", 1, true))
+end)
+
+test("completed hover report is available in an enabled selectable settings field", function()
+    boot()
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 15)
+    clickSetting("Record hover diagnostics")
+    hover({rock("Copper rock")})
+    for _=1,21 do handlers.Draw({timeDeltaSecs=0.25}) end
+    clickSetting("Show diagnostic report")
+    local field
+    for _, widget in ipairs(widgets) do
+        if widget.kind == "InputField" and not widget.destroyed then field = widget end
+    end
+    assert(field, "A selectable report field must be available")
+    assert(field.enabled ~= false and field.clickthrough ~= true)
+    equal(field.visibility, ui.TextContentVisibilityMode.VISIBLE)
+    equal(field.filterMode, ui.InputFieldFilterMode.NONE)
+    assert(field.maxLength >= #field.content)
+    for _, text in ipairs({"REPORT BEGIN", "REPORT END", "menus:", "states:", "panels:", "labels:", "Copper rock"}) do
+        assert(field.content:find(text, 1, true), "Missing report section " .. text)
+    end
+    assert(field.height >= 100)
+    local snapshot = field.content
+    for _=1,5 do handlers.Draw({timeDeltaSecs=1}) end
+    equal(field.content, snapshot)
+    field.content = "An accidental edit must not alter the stored report"
+    clickSetting("Show diagnostic report")
+    for _, widget in ipairs(widgets) do
+        if widget.kind == "InputField" and not widget.destroyed then equal(widget.content, snapshot) end
+    end
+end)
+
+test("opening the report before recording explains how to create it", function()
+    boot()
+    clickSetting("Show diagnostic report")
+    local found = false
+    for _, widget in ipairs(widgets) do
+        if widget.kind == "InputField" and not widget.destroyed then
+            found = true
+            assert(widget.content:find("No completed report yet", 1, true))
+        end
+    end
+    equal(found, true)
+end)
+
+test("completed report stays available while a new recording is in progress", function()
+    boot()
+    local recorder = require("lib/hover_diagnostics").new(function() end)
+    recorder:start()
+    for _=1,21 do recorder:draw(0.25, "original captured state") end
+    local first = recorder:report()
+    assert(first:find("REPORT END", 1, true))
+    recorder:start()
+    equal(recorder:report(), first)
+    recorder:draw(0.25, "next state")
+    equal(recorder:report(), first)
 end)
 
 test("real entrypoint has no Logic callback and unsubscribes on shutdown", function()
