@@ -4,6 +4,7 @@ function M.new(database, changed)
     local self = {
         showHoverCount = database:GetBool("showHoverCount") ~= false,
         numberOnly = database:GetBool("numberOnly") == true,
+        limitToBoxTier = database:GetBool("limitToBoxTier") == true,
     }
 
     function self:build(parent)
@@ -16,6 +17,7 @@ function M.new(database, changed)
         for index, option in ipairs({
             {key="showHoverCount", label="Show count on hover"},
             {key="numberOnly", label="Number only"},
+            {key="limitToBoxTier", label="Match carried ore-box tier"},
         }) do
             local button = ui.Button.new(parent)
             button:SetPos(12, 42 + (index - 1) * 40)
@@ -37,10 +39,10 @@ function M.new(database, changed)
         end
 
         local hint = ui.Text.new(parent)
-        hint:SetPos(12, 128)
-        hint:SetSize(-24, 64, 1, 0)
+        hint:SetPos(12, 168)
+        hint:SetSize(-24, 96, 1, 0)
         hint.font, hint.rgba, hint.clickthrough = id.Font.MUSEO_SANS_15PT_REGULAR, 0xBAC8D4FF, true
-        hint.content = "Hover count appears beside the cursor without clicking.<br>Number only shows Copper rock (17)."
+        hint.content = "Hover count updates the game's existing hover box.<br>Number only shows Copper rock (17).<br>Tier matching uses your highest-tier carried box."
     end
 
     return self

@@ -1,7 +1,7 @@
 local Catalog = require("lib/catalog")
 local Reader = require("lib/reader")
-local hover = require("lib/hover").new()
-local settings = require("lib/settings").new(PersistentDB, function() hover:hide() end)
+local hover = require("lib/native_hover").new()
+local settings = require("lib/settings").new(PersistentDB, function() hover:clear() end)
 local focused = true
 local reference = "stone-spirit-spy"
 local reader = Reader.new({
@@ -26,7 +26,7 @@ end
 subscribe("MiniMenuReady", function(event)
     local hasBox
     local counts = {}
-    local hoverText
+    local hoverName, hoverSuffix
     local entries = event.miniMenu.entries
     for index, entry in ipairs(entries) do
         local old = originals[entry]
@@ -37,7 +37,7 @@ subscribe("MiniMenuReady", function(event)
             local spirit = Catalog.rock(entry.subjectText) or Catalog.rock(loc.config.name)
             if spirit then
                 if hasBox == nil then hasBox = reader:hasBox() end
-                if hasBox then
+                if hasBox and (not settings.limitToBoxTier or reader:canHold(spirit)) then
                     local cached = counts[spirit.key]
                     if not cached then
                         cached = {value=reader:count(spirit)}
@@ -52,16 +52,17 @@ subscribe("MiniMenuReady", function(event)
                     originals[entry] = {original=original, rendered=rendered}
                     if index == #entries then
                         local name = Catalog.rock(entry.subjectText) and entry.subjectText or loc.config.name
-                        hoverText = name:gsub("<[^>]*>", "") .. " (" .. countLabel .. ")"
+                        hoverName = name
+                        hoverSuffix = " <col=80d8ff>(" .. countLabel .. ")</col>"
                     end
                 end
             end
         end
     end
-    if hoverText and settings.showHoverCount and focused and not MiniMenu.IsOpen() then
-        hover:show(hoverText)
+    if hoverName and settings.showHoverCount and focused and not MiniMenu.IsOpen() then
+        hover:setTarget(hoverName, hoverSuffix)
     else
-        hover:hide()
+        hover:clear()
     end
 end)
 
@@ -69,10 +70,11 @@ subscribe("InventoryAdded", function(event) reader:inventoryChanged(event.inv) e
 subscribe("InventoryUpdated", function(event) reader:inventoryChanged(event.inv) end)
 subscribe("InventoryRemoved", function(event) reader:inventoryChanged(event.inv) end)
 subscribe("GameStateChanged", function() reader:reset(); hover:clear() end)
-subscribe("MiniMenuOpened", function() hover:hide() end)
+subscribe("Draw", function() hover:draw() end)
+subscribe("MiniMenuOpened", function() hover:clear() end)
 subscribe("WindowFocusChanged", function(event)
     focused = event.hasFocus
-    if not focused then hover:hide() end
+    if not focused then hover:clear() end
 end)
 subscribe("SettingsLayerReady", function(event) settings:build(event.component) end)
 
@@ -81,4 +83,4 @@ function PluginShutdown()
     hover:clear()
 end
 
-log("Stone Spirit Spy 0.2.0 loaded. Carry an ore box and hover over a rock.")
+log("Stone Spirit Spy 0.3.1 loaded. Carry an ore box and hover over a rock.")

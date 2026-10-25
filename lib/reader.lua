@@ -8,31 +8,34 @@ end
 
 function M.new(api)
     local self = {}
-    local backpackDirty, carryingBox = true, false
+    local backpackDirty, carriedTier = true, nil
 
     function self:inventoryChanged(cfg)
         if cfg and cfg.id == api.backpackID then backpackDirty = true end
     end
 
     function self:reset()
-        backpackDirty, carryingBox = true, false
+        backpackDirty, carriedTier = true, nil
     end
 
     function self:hasBox()
         if not api.available() then self:reset(); return false end
-        if not backpackDirty then return carryingBox end
-        carryingBox = false
+        if not backpackDirty then return carriedTier ~= nil end
+        carriedTier = nil
         local slots = try(function() return api.slots(api.backpackID) end)
         if not slots then return false end
         for _, slot in pairs(slots) do
-            if slot.obj and Catalog.boxes[slot.obj.id]
-                and Catalog.isCount(slot.count) and slot.count > 0 then
-                carryingBox = true
-                break
+            local tier = slot.obj and Catalog.boxes[slot.obj.id]
+            if tier and Catalog.isCount(slot.count) and slot.count > 0 then
+                carriedTier = math.max(carriedTier or 0, tier)
             end
         end
         backpackDirty = false
-        return carryingBox
+        return carriedTier ~= nil
+    end
+
+    function self:canHold(spirit)
+        return self:hasBox() and carriedTier >= spirit.boxTier
     end
 
     function self:count(spirit)

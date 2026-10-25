@@ -117,6 +117,38 @@ test("multiple ore boxes share one count", function()
     equal(reader:count(copper), 248)
 end)
 
+test("all ten box tiers allow exactly their supported spirit types", function()
+    local additions = {
+        {"copper", "tin"}, {"iron"}, {"coal", "silver"}, {"mithril"},
+        {"adamantite", "luminite", "gold"}, {"runite"}, {"orichalcite", "drakolith"},
+        {"necrite", "phasmatite"}, {"banite"}, {"light_animica", "dark_animica"},
+    }
+    local supported = {}
+    for tier, keys in ipairs(additions) do
+        reset()
+        bag = {{obj={id=44777 + tier * 2}, count=1}}
+        for _, key in ipairs(keys) do supported[key] = true end
+        for _, spirit in ipairs(Catalog.spirits) do
+            equal(reader:canHold(spirit), supported[spirit.key] == true)
+        end
+        equal(reads, 1)
+    end
+end)
+
+test("highest carried tier wins regardless of backpack slot order", function()
+    for _, ids in ipairs({{44779,44797}, {44797,44779}}) do
+        reset()
+        bag = {{obj={id=ids[1]}, count=1}, {obj={id=ids[2]}, count=1}}
+        equal(reader:canHold(Catalog.rock("Dark animica rock")), true)
+    end
+    bag = {{obj={id=44779}, count=1}, {obj={id=44798}, count=1}, {obj={id=44797}, count=0}}
+    reader:inventoryChanged({id=93})
+    equal(reader:canHold(copper), true)
+    equal(reader:canHold(Catalog.rock("Iron rock")), false)
+    online = false
+    equal(reader:canHold(copper), false)
+end)
+
 test("box deposit, withdrawal, logout and re-login invalidate carried state", function()
     reset()
     bag = {{obj={id=44779}, count=1}}
@@ -144,12 +176,13 @@ test("labels preserve full counts and distinguish zero from unavailable", functi
 end)
 
 local handlers, logs, available, nativeBag, nativeValues, widgets, uiRoot, settingsHost, mouse, menuOpen, saved
+local nativeTooltip, nativeTooltipBox
 local function boot(preferences)
     handlers, logs, available, nativeBag, nativeValues = {}, {}, true, {}, {}
     widgets, mouse, menuOpen, saved = {}, {x=200, y=200}, false, preferences or {}
     Event = {}
     for _, name in ipairs({"MiniMenuReady", "InventoryAdded", "InventoryUpdated", "InventoryRemoved", "GameStateChanged",
-        "MiniMenuOpened", "WindowFocusChanged", "SettingsLayerReady"}) do
+        "MiniMenuOpened", "WindowFocusChanged", "SettingsLayerReady", "Draw"}) do
         Event[name] = {
             Subscribe=function(reference, callback) handlers[name]=callback end,
             Unsubscribe=function(reference) handlers[name]=nil end,
@@ -157,19 +190,20 @@ local function boot(preferences)
     end
     PluginShutdown = nil
     config = {Inv={INV={id=93}}}
-    config.Font = {FromID=function() return {GetStringWidth=function(_, content) return #content * 7 end} end}
+    config.Font = {FromID=function() return {GetStringWidth=function(_, content) return #content:gsub("<[^>]*>", "") * 7 end} end}
     PersistentDB = {
         GetBool=function(_, key) if type(saved[key]) == "boolean" then return saved[key] end end,
         SetBool=function(_, key, value) saved[key]=value; return true end,
     }
     game = {options={InterfaceScale={setting=100}}}
     id = {Font={MUSEO_SANS_15PT_REGULAR=1}, StyleSheet={BUTTON_DEFAULT=2},
-        Component={TOPLEVEL_V2__PLUGIN_BUILD_LAYER_TOP=3}}
+        Interface={TEXT_TOOLTIP=1486}, Component={TOPLEVEL_V2__PLUGIN_BUILD_LAYER_TOP=3}}
     local function component(kind, parent)
         local control = {kind=kind, parent=parent, children={}, hooks={}, hidden=false, text={}}
         function control:SetPos(x, y) self.x, self.y=x, y end
         function control:SetSize(w, h, wp, hp)
             self.width, self.height=w+(wp or 0)*(self.parent.width or 0), h+(hp or 0)*(self.parent.height or 0)
+            self.size = {width=w, height=h, widthParentPc=wp or 0, heightParentPc=hp or 0}
         end
         function control:Subscribe(hook, callback) self.hooks[hook]=callback end
         function control:Destroy()
@@ -184,8 +218,18 @@ local function boot(preferences)
     uiRoot.width, uiRoot.height, uiRoot.xyGlobal = 1024, 768, {x=0,y=0}
     settingsHost = component("SettingsHost")
     settingsHost.width, settingsHost.height = 420, 300
-    ui = {Hook={ONBUTTONPRESSED=1}, Interfaces={GetComponent=function(_, componentID)
-        equal(componentID, 3); return uiRoot
+    nativeTooltipBox = component("NativeTooltipBox", uiRoot)
+    nativeTooltipBox:SetSize(240, 30)
+    nativeTooltip = component("NativeTooltip", nativeTooltipBox)
+    nativeTooltip:SetSize(224, 22)
+    nativeTooltip.type, nativeTooltip.font, nativeTooltip.visibleGlobal = 4, 1, true
+    nativeTooltip.content = "Mine <col=ffff00>Copper rock</col>"
+    ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4}, Interfaces={GetComponent=function(_, interfaceID, componentID)
+        if interfaceID == 3 then return uiRoot end
+        equal(interfaceID, 1486)
+        if componentID == 15 then return nativeTooltip end
+        if componentID == 1 then return nativeTooltipBox end
+        error("Unexpected tooltip component")
     end}}
     for _, kind in ipairs({"Layer", "Rectangle", "Text", "Button"}) do
         ui[kind] = {new=function(parent) return component(kind, parent) end}
@@ -208,17 +252,16 @@ local function rock(name)
     return {actionEntryType=3, subjectText=name, locData={config={name=name}},
         fullText="Mine <col=ffff00>" .. name .. "</col>", actionType=3}
 end
-local function hover(entries) handlers.MiniMenuReady({miniMenu={entries=entries}}) end
-local function overlay()
-    for _, control in ipairs(widgets) do
-        if control.kind == "Layer" and control.parent == uiRoot and not control.destroyed then return control end
+local function hover(entries)
+    handlers.MiniMenuReady({miniMenu={entries=entries}})
+    local top = entries[#entries]
+    nativeTooltip.visibleGlobal = top ~= nil and top.fullText ~= nil and not menuOpen
+    if top and top.fullText then
+        nativeTooltip.content = top.fullText
+        nativeTooltip:SetSize(224, 22)
+        nativeTooltipBox:SetSize(240, 30)
     end
-end
-local function overlayLabel()
-    local layer = overlay()
-    for _, child in ipairs(layer and layer.children or {}) do
-        if child.kind == "Text" then return child end
-    end
+    handlers.Draw({})
 end
 local function clickSetting(prefix)
     for _, child in ipairs(settingsHost.children) do child:Destroy() end
@@ -232,147 +275,245 @@ local function clickSetting(prefix)
     end
     error("Missing setting: " .. prefix)
 end
+local function nativeHasCount()
+    return nativeTooltip.content:find("<col=80d8ff>", 1, true) ~= nil
+end
+local function expectedNative(name, count)
+    return "Mine <col=ffff00>" .. name .. "</col> <col=80d8ff>(" .. count .. ")</col>"
+end
 
-test("real entrypoint shows the requested 248 Copper Stone Spirits next to the rock", function()
+test("hover edits the existing native tooltip instead of creating another box", function()
+    boot({numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local originalWidgets = #widgets
+    hover({rock("Copper rock")})
+    equal(nativeTooltip.content, "Mine <col=ffff00>Copper rock</col> <col=80d8ff>(17)</col>")
+    equal(#widgets, originalWidgets)
+    equal(nativeTooltip.destroyed, nil)
+    equal(nativeTooltipBox.destroyed, nil)
+end)
+
+test("Draw updates native hover text generated after MiniMenuReady", function()
+    boot({numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local entry = rock("Copper rock")
+    handlers.MiniMenuReady({miniMenu={entries={entry}}})
+    nativeTooltip.content = entry.fullText
+    equal(nativeHasCount(), false)
+    handlers.Draw({})
+    equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
+    assert(entry.overrideText:find("(17)", 1, true))
+end)
+
+test("tier matching hides unsupported counts from both native hover and menu", function()
+    boot({numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    for _, spirit in ipairs(Catalog.spirits) do nativeValues[spirit.varName] = field(spirit, 17) end
+    local iron = rock("Iron rock")
+    hover({iron})
+    equal(nativeHasCount(), true)
+    local button = clickSetting("Match carried ore-box tier")
+    equal(button.label, "Match carried ore-box tier: On")
+    equal(saved.limitToBoxTier, true)
+    hover({iron})
+    equal(iron.overrideText, "")
+    equal(nativeHasCount(), false)
+    for _, name in ipairs({"Copper rock", "Tin rock"}) do
+        local entry = rock(name)
+        hover({entry})
+        assert(entry.overrideText:find("(17)", 1, true))
+        equal(nativeTooltip.content, expectedNative(name, "17"))
+    end
+    clickSetting("Match carried ore-box tier")
+    hover({iron})
+    equal(nativeTooltip.content, expectedNative("Iron rock", "17"))
+end)
+
+test("banking the highest box lowers the native hover and menu display limit", function()
+    boot({limitToBoxTier=true, numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}, {obj={id=44797}, count=1}}
+    local spirit = Catalog.rock("Dark animica rock")
+    nativeValues[spirit.varName] = field(spirit, 248)
+    local entry = rock("Dark animica rock")
+    hover({entry})
+    equal(nativeTooltip.content, expectedNative("Dark animica rock", "248"))
+    nativeBag = {{obj={id=44779}, count=1}}
+    handlers.InventoryUpdated({inv={id=93}})
+    handlers.InventoryUpdated({inv={id=95}})
+    hover({entry})
+    equal(entry.overrideText, "")
+    equal(nativeHasCount(), false)
+    nativeBag = {{obj={id=44797}, count=1}}
+    handlers.InventoryUpdated({inv={id=93}})
+    hover({entry})
+    equal(nativeTooltip.content, expectedNative("Dark animica rock", "248"))
+end)
+
+test("tier matching survives reload", function()
+    boot()
+    clickSetting("Match carried ore-box tier")
+    local persisted = saved
+    PluginShutdown()
+    boot(persisted)
+    nativeBag = {{obj={id=44779}, count=1}}
+    local spirit = Catalog.rock("Iron rock")
+    nativeValues[spirit.varName] = field(spirit, 17)
+    local entry = rock("Iron rock")
+    hover({entry})
+    equal(entry.overrideText, nil)
+    equal(nativeHasCount(), false)
+end)
+
+test("counts update in the existing hover box and right-click menu", function()
     boot()
     nativeBag = {{obj={id=44797}, count=1}}
     local value = field(copper, 248)
     nativeValues[copper.varName] = value
     local entry = rock("Copper rock")
     hover({entry})
-    equal(entry.overrideText, "Mine <col=ffff00>Copper rock</col> <col=80d8ff>(248 Copper Stone Spirits)</col>")
+    equal(entry.overrideText, expectedNative("Copper rock", "248 Copper Stone Spirits"))
+    equal(nativeTooltip.content, expectedNative("Copper rock", "248 Copper Stone Spirits"))
     equal(entry.actionType, 3)
     value.value = 247
     hover({entry})
-    equal(entry.overrideText, "Mine <col=ffff00>Copper rock</col> <col=80d8ff>(247 Copper Stone Spirits)</col>")
+    equal(nativeTooltip.content, expectedNative("Copper rock", "247 Copper Stone Spirits"))
 end)
 
-test("hover displays the rock and count without a right click and allows mining through it", function()
-    boot()
-    nativeBag = {{obj={id=44797}, count=1}}
-    nativeValues[copper.varName] = field(copper, 17)
-    hover({rock("Copper rock")})
-    equal(menuOpen, false)
-    equal(overlay().hidden, false)
-    equal(overlayLabel().content, "Copper rock (17 Copper Stone Spirits)")
-    equal(overlay().clickthrough, true)
-    for _, child in ipairs(overlay().children) do equal(child.clickthrough, true) end
-    nativeValues[copper.varName].value = 16
-    hover({rock("Copper rock")})
-    equal(overlayLabel().content, "Copper rock (16 Copper Stone Spirits)")
-end)
-
-test("number only setting changes both hover and menu to Copper rock (17)", function()
+test("number only applies to the existing native hover and menu, including zero and unknown", function()
     boot()
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
-    local button = clickSetting("Number only")
-    equal(button.label, "Number only: On")
+    equal(clickSetting("Number only").label, "Number only: On")
     equal(saved.numberOnly, true)
     local entry = rock("Copper rock")
     hover({entry})
-    equal(overlayLabel().content, "Copper rock (17)")
-    equal(entry.overrideText, "Mine <col=ffff00>Copper rock</col> <col=80d8ff>(17)</col>")
+    equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
+    equal(entry.overrideText, nativeTooltip.content)
     nativeValues[copper.varName].value = 0
     hover({entry})
-    equal(overlayLabel().content, "Copper rock (0)")
+    equal(nativeTooltip.content, expectedNative("Copper rock", "0"))
     nativeValues[copper.varName] = nil
     hover({entry})
-    equal(overlayLabel().content, "Copper rock (?)")
+    equal(nativeTooltip.content, expectedNative("Copper rock", "?"))
 end)
 
-test("hover toggle hides the label while preserving the context menu count", function()
+test("hover toggle restores native text and size while retaining the menu count", function()
     boot()
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
     hover({rock("Copper rock")})
-    local button = clickSetting("Show count on hover")
-    equal(button.label, "Show count on hover: Off")
-    equal(overlay().hidden, true)
-    equal(saved.showHoverCount, false)
+    equal(clickSetting("Show count on hover").label, "Show count on hover: Off")
+    equal(nativeTooltip.content, "Mine <col=ffff00>Copper rock</col>")
+    equal(nativeTooltipBox.width, 240)
+    equal(nativeTooltip.width, 224)
+    equal(nativeTooltip.visibleGlobal, true)
     local entry = rock("Copper rock")
     hover({entry})
-    equal(overlay().hidden, true)
+    equal(nativeHasCount(), false)
     assert(entry.overrideText:find("17 Copper Stone Spirits", 1, true))
 end)
 
-test("both display settings survive plugin reload", function()
+test("hover and number-only settings survive plugin reload", function()
     boot({showHoverCount=false, numberOnly=true})
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
     local entry = rock("Copper rock")
     hover({entry})
-    equal(overlay(), nil)
+    equal(nativeHasCount(), false)
     assert(entry.overrideText:find("(17)", 1, true))
     clickSetting("Show count on hover")
     hover({entry})
-    equal(overlayLabel().content, "Copper rock (17)")
+    equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
     local persisted = saved
     PluginShutdown()
     boot(persisted)
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
     hover({rock("Copper rock")})
-    equal(overlayLabel().content, "Copper rock (17)")
+    equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
 end)
 
-test("hover hides over unrelated UI, empty menus, right-click menus and lost focus", function()
+test("unrelated UI, right-click menus and lost focus stop native hover annotation", function()
     boot()
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
     local entry = rock("Copper rock")
     hover({entry})
-    hover({entry, {actionEntryType=1}})
-    equal(overlay().hidden, true)
+    hover({entry, {actionEntryType=1, fullText="Bank chest"}})
+    equal(nativeTooltip.content, "Bank chest")
     hover({entry})
     hover({})
-    equal(overlay().hidden, true)
+    equal(nativeHasCount(), false)
     hover({entry})
     menuOpen = true
     handlers.MiniMenuOpened({})
-    equal(overlay().hidden, true)
+    equal(nativeHasCount(), false)
     hover({entry})
-    equal(overlay().hidden, true)
+    equal(nativeHasCount(), false)
     menuOpen = false
     hover({entry})
     handlers.WindowFocusChanged({hasFocus=false})
-    equal(overlay().hidden, true)
+    equal(nativeHasCount(), false)
     hover({entry})
-    equal(overlay().hidden, true)
+    equal(nativeHasCount(), false)
     handlers.WindowFocusChanged({hasFocus=true})
     hover({entry})
-    equal(overlay().hidden, false)
+    equal(nativeHasCount(), true)
 end)
 
-test("hover follows the mouse, stays on screen and handles interface scaling", function()
+test("repeated Draws and native text rewrites do not duplicate counts or expand the box repeatedly", function()
     boot({numberOnly=true})
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
     local entry = rock("Copper rock")
-    game.options.InterfaceScale.setting = 150
-    mouse = {x=300, y=300}
     hover({entry})
-    equal(overlay().x, 216)
-    equal(overlay().y, 228)
-    mouse = {x=1530, y=1140}
-    hover({entry})
-    assert(overlay().x >= 0 and overlay().x + overlay().width <= uiRoot.width)
-    assert(overlay().y >= 0 and overlay().y + overlay().height <= uiRoot.height)
+    local width = nativeTooltipBox.width
+    assert(width > 240)
+    for _=1,5 do handlers.Draw({}) end
+    equal(nativeTooltipBox.width, width)
+    nativeTooltip.content = entry.fullText
+    handlers.Draw({})
+    equal(nativeTooltip.content, expectedNative("Copper rock", "17"))
+    equal(nativeTooltipBox.width, width)
+    PluginShutdown()
+    equal(nativeTooltipBox.width, 240)
+    equal(nativeTooltip.width, 224)
+    equal(nativeTooltip.content, entry.fullText)
+    equal(nativeTooltip.destroyed, nil)
 end)
 
-test("game state changes discard old overlay components and build on the current interface", function()
+test("native hover retains other plugin text and skips unrelated or hidden tooltip content", function()
+    boot({numberOnly=true})
+    nativeBag = {{obj={id=44779}, count=1}}
+    nativeValues[copper.varName] = field(copper, 17)
+    local entry = rock("Copper rock")
+    handlers.MiniMenuReady({miniMenu={entries={entry}}})
+    nativeTooltip.content = "Mine Copper rock [other plugin]"
+    handlers.Draw({})
+    equal(nativeTooltip.content, "Mine Copper rock [other plugin] <col=80d8ff>(17)</col>")
+    nativeTooltip.content = "Bank chest"
+    handlers.Draw({})
+    equal(nativeTooltip.content, "Bank chest")
+    nativeTooltip.content, nativeTooltip.visibleGlobal = entry.fullText, false
+    handlers.Draw({})
+    equal(nativeTooltip.content, entry.fullText)
+    equal(nativeTooltip.visibleGlobal, false)
+end)
+
+test("game state changes restore the native tooltip without destroying its components", function()
     boot()
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
     local entry = rock("Copper rock")
     hover({entry})
-    local previous = overlay()
     handlers.GameStateChanged({})
-    equal(previous.destroyed, true)
+    equal(nativeTooltip.content, entry.fullText)
+    equal(nativeTooltipBox.width, 240)
+    equal(nativeTooltip.destroyed, nil)
     hover({entry})
-    assert(overlay() ~= previous)
-    PluginShutdown()
-    equal(overlay(), nil)
+    equal(nativeHasCount(), true)
 end)
 
 test("real entrypoint reads all 17 spirits using the actual dump bindings", function()
@@ -434,7 +575,7 @@ test("real entrypoint updates after deposit and resumes on withdrawal", function
     handlers.InventoryUpdated({inv={id=93}})
     hover({entry})
     equal(entry.overrideText, "")
-    equal(overlay().hidden, true)
+    equal(nativeHasCount(), false)
     entry = rock("Copper rock")
     hover({entry})
     equal(entry.overrideText, nil)
@@ -445,9 +586,9 @@ test("real entrypoint updates after deposit and resumes on withdrawal", function
     assert(entry.overrideText:find("248 Copper Stone Spirits", 1, true))
 end)
 
-test("real entrypoint performs no Draw or Logic work and unsubscribes on shutdown", function()
+test("real entrypoint has no Logic callback and unsubscribes on shutdown", function()
     boot()
-    equal(handlers.Draw, nil)
+    equal(type(handlers.Draw), "function")
     equal(handlers.Logic, nil)
     equal(Event.PluginShutdown, nil)
     equal(type(PluginShutdown), "function")

@@ -1,28 +1,28 @@
 local M = {}
 
 M.spirits = {
-    {key="copper", name="Copper", id=44799, varID=11514},
-    {key="tin", name="Tin", id=44800, varID=11515},
-    {key="iron", name="Iron", id=44801, varID=11516},
-    {key="silver", name="Silver", id=44802, varID=11518},
-    {key="gold", name="Gold", id=44803, varID=11519},
-    {key="coal", name="Coal", id=44804, varID=11517},
-    {key="mithril", name="Mithril", id=44805, varID=11520},
-    {key="luminite", name="Luminite", id=44806, varID=11523},
-    {key="adamantite", name="Adamantite", id=44807, varID=11521},
-    {key="runite", name="Runite", id=44808, varID=11522},
-    {key="orichalcite", name="Orichalcite", id=44809, varID=11524},
-    {key="drakolith", name="Drakolith", id=44810, varID=11525},
-    {key="necrite", name="Necrite", id=44811, varID=11526},
-    {key="phasmatite", name="Phasmatite", id=44812, varID=11527},
-    {key="banite", name="Banite", id=44813, varID=11528},
-    {key="light_animica", name="Light animica", id=44814, varID=11529},
-    {key="dark_animica", name="Dark animica", id=44815, varID=11530},
+    {key="copper", name="Copper", id=44799, varID=11514, boxTier=1},
+    {key="tin", name="Tin", id=44800, varID=11515, boxTier=1},
+    {key="iron", name="Iron", id=44801, varID=11516, boxTier=2},
+    {key="silver", name="Silver", id=44802, varID=11518, boxTier=3},
+    {key="gold", name="Gold", id=44803, varID=11519, boxTier=5},
+    {key="coal", name="Coal", id=44804, varID=11517, boxTier=3},
+    {key="mithril", name="Mithril", id=44805, varID=11520, boxTier=4},
+    {key="luminite", name="Luminite", id=44806, varID=11523, boxTier=5},
+    {key="adamantite", name="Adamantite", id=44807, varID=11521, boxTier=5},
+    {key="runite", name="Runite", id=44808, varID=11522, boxTier=6},
+    {key="orichalcite", name="Orichalcite", id=44809, varID=11524, boxTier=7},
+    {key="drakolith", name="Drakolith", id=44810, varID=11525, boxTier=7},
+    {key="necrite", name="Necrite", id=44811, varID=11526, boxTier=8},
+    {key="phasmatite", name="Phasmatite", id=44812, varID=11527, boxTier=8},
+    {key="banite", name="Banite", id=44813, varID=11528, boxTier=9},
+    {key="light_animica", name="Light animica", id=44814, varID=11529, boxTier=10},
+    {key="dark_animica", name="Dark animica", id=44815, varID=11530, boxTier=10},
 }
 
 M.boxes = {}
 for index = 1, 10 do
-    M.boxes[44777 + index * 2] = true
+    M.boxes[44777 + index * 2] = index
 end
 
 local byItem, rocks = {}, {}

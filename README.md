@@ -1,7 +1,7 @@
 # Stone Spirit Spy
 
-Stone Spirit Spy shows your ore-box stone spirits beside the cursor when you hover
-over a rock, without clicking. It also adds the count to the right-click menu.
+Stone Spirit Spy adds your ore-box stone spirits to the game's existing hover box
+when you hover over a rock. It also adds the count to the right-click menu.
 Enable **Number only** for a shorter label:
 
 ```text
@@ -14,7 +14,8 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.2.0** adds a cursor-side hover label and saved display settings.
+Version **0.3.1** updates the existing native hover box and removes the separate
+floating label. The number-only and carried-box tier settings apply to both menus.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -44,19 +45,25 @@ The plugin needs no additional plugins, permissions, or network access.
 
 Open **Plugin Hub > Manage > Stone Spirit Spy** and select its gear icon.
 
-- **Show count on hover:** On by default. Shows the rock name and spirit count
-  beside the cursor without right-clicking. Turn it off to keep only the menu count.
+- **Show count on hover:** On by default. Adds the count to the existing game hover
+  box without right-clicking. Turn it off to keep the count only in the right-click menu.
 - **Number only:** Off by default. Turn it on for `Copper rock (17)` instead of
   `Copper rock (17 Copper Stone Spirits)`. This affects both displays.
+- **Match carried ore-box tier:** Off by default. Turn it on to hide hover and
+  menu counts for spirits your highest-tier carried box cannot hold. Banked boxes
+  are ignored. Carrying only Bronze shows copper and tin; carrying Bronze and
+  Elder Rune together allows all supported spirit types.
 
-Both settings are saved immediately and restored when the plugin reloads.
-The hover label lets clicks pass through, so you can mine normally. It hides when
-you move off the rock, open a right-click menu, or switch away from the game window.
+Settings are saved immediately and restored when the plugin reloads.
+The client keeps control of the hover box's position, visibility, and styling.
+The plugin updates its text and widens the existing box to fit the count. It restores
+the original text and dimensions when the count no longer applies.
 
 ## Check the count in game
 
 1. Carry an ore box containing a known amount of copper stone spirits.
-2. Hover over a Copper rock. Check that its name has the same spirit count beside it.
+2. Hover over a Copper rock. Check that the existing game hover box includes the
+   matching spirit count and that no additional floating box appears.
 3. Mine until a spirit is consumed, then hover again. Check that the count decreases.
 4. Add more copper spirits to the box. Check that the count increases.
 5. Put a different number of tin spirits in the box. Hover over a Tin rock and check
@@ -67,8 +74,12 @@ you move off the rock, open a right-click menu, or switch away from the game win
 8. Reload the plugin and repeat the hover check without inspecting the box first.
 9. Enable **Number only** in the plugin settings. Check that hover and right-click
    counts both use the shorter label. Reload and confirm the setting stays on.
-10. Turn **Show count on hover** off. Check that the cursor label disappears while
-    the right-click count remains available.
+10. Turn **Show count on hover** off. Check that the game's normal hover text remains
+    without the count, while the right-click count stays available.
+11. Turn **Match carried ore-box tier** on. Bank all boxes except Bronze. Check
+    that copper and tin show counts, while iron and higher-tier rocks do not.
+12. Withdraw an Elder Rune box while keeping Bronze. Check that higher-tier counts
+    return. Bank Elder Rune again and check that the limit returns to Bronze.
 
 If a count says `unavailable`, the native field could not be read. This differs
 from a confirmed empty box, which displays zero. A right-click menu keeps the
@@ -80,6 +91,9 @@ In number-only mode, an unavailable count displays `?`.
 Copper, tin, iron, silver, gold, coal, mithril, luminite, adamantite, runite,
 orichalcite, drakolith, necrite, phasmatite, banite, light animica, and dark animica.
 Concentrated coal and gold rocks use their corresponding spirit count.
+
+Tier matching follows the [ore-box storage table](https://runescape.wiki/w/Smithing/Smithing_tables#Ore_boxes).
+Steel adds coal and silver, and Adamant adds adamantite, luminite, and gold.
 
 ## Verify and package changes
 
@@ -114,8 +128,13 @@ local RuneScape cache snapshot `2736`, build `950.1`.
 The plugin uses [`VarType.value`](https://developer.runescape.com/rs/game/config/vartype.html)
 for current counts and [`MiniMenuEntry.overrideText`](https://developer.runescape.com/rs/game/minimenu.html)
 to append menu labels during `MiniMenuReady`. The highest-priority entry supplies
-the cursor-side label. The label uses native Text, Layer, and Rectangle components.
+the pending native hover annotation. `Draw` applies it to the existing `TEXT_TOOLTIP`
+text component after the client generates the base hover text. The native layout
+was checked against cache snapshot `2736`, build `950.1`: component `15` is the text,
+and component `1` is its box. Component type, visibility, and rock-name checks keep
+the annotation scoped to the matching tooltip. No hover UI components are created.
 The [settings layer](https://developer.runescape.com/rs/core/events.html#settingslayerready)
-contains the display toggles, saved as two PersistentDB booleans.
-Inventory events invalidate the carried-box check. There are no Draw or Logic
-callbacks, stored spirit-count snapshots, or background scans.
+contains the display toggles, saved as three PersistentDB booleans.
+Inventory events invalidate the carried-box check. The Draw callback returns
+without native lookups when there is no relevant hover target. There is no Logic
+callback, stored spirit-count snapshot, or background scan.
