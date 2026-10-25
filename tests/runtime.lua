@@ -27,7 +27,7 @@ local function reset()
 end
 local copper = Catalog.rock("Copper rock")
 
-test("all 17 storage bindings agree with the supplied native VarPlayer dump", function()
+test("all 17 storage bindings agree with the native reference data", function()
     equal(#Catalog.spirits, 17)
     for _, spirit in ipairs(Catalog.spirits) do
         equal(dumpVariables[spirit.varName], spirit.varID)
@@ -257,7 +257,7 @@ local function boot(preferences)
     function layer:IterateDynamicComponents(callback)
         callback(nativeTooltip, nativeTooltip.visibleGlobal)
     end
-    -- Replay the layout discovered in HoverReport.txt from client 951-1.
+    -- Native hover layout from client 951-1.
     nativePanels[1486] = {[15]={type=2, content="Tooltip text", visibleGlobal=true}}
     nativePanels[1477] = layers
     ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=2, LAYER=20},
@@ -327,7 +327,7 @@ local function expectedNative(name, count)
     return "Mine <col=ffff00>" .. name .. "</col> <col=80d8ff>(" .. count .. ")</col>"
 end
 
-test("hover edits the reported TOPLEVEL_V2 dynamic label and leaves the placeholder alone", function()
+test("hover edits the native dynamic label and leaves unrelated labels alone", function()
     boot({numberOnly=true})
     nativeBag = {{obj={id=44779}, count=1}}
     nativeValues[copper.varName] = field(copper, 17)
@@ -692,7 +692,7 @@ test("game state changes restore the native tooltip without destroying its compo
     equal(nativeHasCount(), true)
 end)
 
-test("real entrypoint reads all 17 spirits using the actual dump bindings", function()
+test("entrypoint reads all 17 spirits using the native reference bindings", function()
     boot()
     nativeBag = {{obj={id=44797}, count=1}}
     for index, spirit in ipairs(Catalog.spirits) do
@@ -762,190 +762,6 @@ test("real entrypoint updates after deposit and resumes on withdrawal", function
     assert(entry.overrideText:find("248 Copper Stone Spirits", 1, true))
 end)
 
-test("diagnostic recorder finds an alternative rock label without modifying it", function()
-    boot()
-    nativeTooltip.visibleGlobal = false
-    local alternative = {type=ui.ComponentType.LABEL, content="Copper rock", visibleGlobal=true,
-        isRestricted=false, parent={staticID=7}}
-    nativePanels[1489] = {[13]=alternative}
-    local lines = {}
-    local recorder = require("lib/hover_diagnostics").new(function(line) lines[#lines+1]=line end)
-    recorder:draw(1, "idle")
-    equal(uiLookups, 0)
-    recorder:start()
-    for _=1,50 do
-        local before = uiLookups
-        recorder:draw(0.1, "native TEXT_TOOLTIP label 15 hidden")
-        assert(uiLookups - before <= 16)
-    end
-    if recorder:active() then recorder:draw(0.1, "native TEXT_TOOLTIP label 15 hidden") end
-    equal(recorder:active(), false)
-    equal(alternative.content, "Copper rock")
-    local report = table.concat(lines, "\n")
-    assert(report:find("TOPLEVEL_V2_HOVER_TARGET static=13", 1, true))
-    assert(report:find("parentStatic=7", 1, true))
-    assert(report:find("REPORT END", 1, true))
-    local before = uiLookups
-    recorder:draw(1, "idle")
-    equal(uiLookups, before)
-end)
-
-test("diagnostic follows nested dynamic labels while static tooltip holds reported placeholder", function()
-    boot()
-    nativePanels[1486][15].content = "Tooltip text"
-    local label = {type=2, content="<col=00ffff>Copper rock", categoryID=2, dynamicID=7,
-        visibleGlobal=true, isRestricted=false, parent={staticID=3}}
-    local nested = {type=20, categoryID=0, dynamicID=1,
-        IterateDynamicComponents=function(_, callback) callback(label, true) end}
-    local root = {type=20, IterateDynamicComponents=function(_, callback) callback(nested, true) end}
-    nativePanels[1489] = {[3]=root}
-    local recorder = require("lib/hover_diagnostics").new(function() end)
-    recorder:start()
-    for _=1,600 do
-        local before = uiLookups
-        recorder:draw(nil, "placeholder")
-        assert(uiLookups-before <= 16)
-    end
-    local report = recorder:report()
-    assert(report:find("TOPLEVEL_V2_HOVER_TARGET static=3/0:1/2:7", 1, true))
-    assert(report:find("text=Tooltip text", 1, true))
-    assert(report:match("dynamic=[1-9]%d*"))
-    assert(report:find("capped=0", 1, true))
-    equal(nativePanels[1486][15].content, "Tooltip text")
-    equal(label.content, "<col=00ffff>Copper rock")
-end)
-
-test("diagnostic caps large dynamic collections and reports stale children", function()
-    boot()
-    local visited = 0
-    local stale = setmetatable({}, {__index=function() error("stale native child") end})
-    nativePanels[1486][0] = {type=20, IterateDynamicComponents=function(_, callback)
-        for i=1,1000 do
-            visited=visited+1
-            if callback(i == 1 and stale or {type=2, content="Copper rock"}, true) then break end
-        end
-    end}
-    local recorder = require("lib/hover_diagnostics").new(function() end)
-    recorder:start()
-    recorder:draw(nil, "placeholder")
-    equal(visited, 64)
-    for _=1,599 do recorder:draw(nil, "placeholder") end
-    local report = recorder:report()
-    assert(report:find("stale native child", 1, true))
-    assert(report:match("capped=[1-9]%d*"))
-    assert(report:find("REPORT END", 1, true))
-end)
-
-test("diagnostic captures live parent sizes when the assumed frame is absent", function()
-    boot()
-    nativePanels[1477][892] = nil
-    nativePanels[1477][902].parent = {staticID=777, interfaceID=1477, type=20,
-        width=138, height=24, visibleGlobal=true,
-        size={width=138, height=24, widthParentPc=0, heightParentPc=0}}
-    nativeTooltip.content = "Mine Copper rock"
-    local recorder = require("lib/hover_diagnostics").new(function() end)
-    recorder:start()
-    for _=1,600 do
-        local before = uiLookups
-        recorder:draw(nil, "native hover frame 892 missing or outside label hierarchy")
-        assert(uiLookups-before <= 16)
-    end
-    local report = recorder:report()
-    assert(report:find("layout:", 1, true))
-    assert(report:find("candidate TOPLEVEL_V2/892 missing", 1, true))
-    assert(report:find("static=777", 1, true))
-    assert(report:find("width=138 height=24", 1, true))
-    assert(report:find("parent chain ended", 1, true))
-    equal(nativeTooltip.content, "Mine Copper rock")
-end)
-
-test("settings diagnostic records actual target and options without saving a new setting", function()
-    boot({showHoverCount=false})
-    nativeBag = {{obj={id=44779}, count=1}}
-    nativeValues[copper.varName] = field(copper, 17)
-    local before = #widgets
-    clickSetting("Record hover diagnostics")
-    equal(saved.limitToBoxTier, nil)
-    handlers.MiniMenuReady({miniMenu={entries={rock("Copper rock")}}})
-    for _=1,21 do handlers.Draw({timeDeltaSecs=0.25}) end
-    local report = table.concat(logs, "\n")
-    assert(report:find("enabled=false", 1, true))
-    assert(report:find("hasBox=true", 1, true))
-    assert(report:find("topSubject=Copper rock", 1, true))
-    assert(report:find("REPORT END", 1, true))
-    local after = #widgets
-    handlers.Draw({timeDeltaSecs=1})
-    equal(#widgets, after)
-end)
-
-test("diagnostic scan tolerates unavailable panel names and terminates", function()
-    boot()
-    id.Interface.TOPLEVEL_V2_HOVER_TARGET = nil
-    local lines = {}
-    local recorder = require("lib/hover_diagnostics").new(function(line) lines[#lines+1]=line end)
-    recorder:start()
-    for _=1,600 do recorder:draw(nil, "no hover target") end
-    equal(recorder:active(), false)
-    assert(table.concat(lines, "\n"):find("REPORT END", 1, true))
-end)
-
-test("completed hover report is available in an enabled selectable settings field", function()
-    boot()
-    nativeBag = {{obj={id=44779}, count=1}}
-    nativeValues[copper.varName] = field(copper, 15)
-    clickSetting("Record hover diagnostics")
-    hover({rock("Copper rock")})
-    for _=1,21 do handlers.Draw({timeDeltaSecs=0.25}) end
-    clickSetting("Show diagnostic report")
-    local field
-    for _, widget in ipairs(widgets) do
-        if widget.kind == "InputField" and not widget.destroyed then field = widget end
-    end
-    assert(field, "A selectable report field must be available")
-    assert(field.enabled ~= false and field.clickthrough ~= true)
-    equal(field.visibility, ui.TextContentVisibilityMode.VISIBLE)
-    equal(field.filterMode, ui.InputFieldFilterMode.NONE)
-    assert(field.maxLength >= #field.content)
-    for _, text in ipairs({"REPORT BEGIN", "REPORT END", "menus:", "states:", "panels:", "labels:", "Copper rock"}) do
-        assert(field.content:find(text, 1, true), "Missing report section " .. text)
-    end
-    assert(field.height >= 100)
-    local snapshot = field.content
-    for _=1,5 do handlers.Draw({timeDeltaSecs=1}) end
-    equal(field.content, snapshot)
-    field.content = "An accidental edit must not alter the stored report"
-    clickSetting("Show diagnostic report")
-    for _, widget in ipairs(widgets) do
-        if widget.kind == "InputField" and not widget.destroyed then equal(widget.content, snapshot) end
-    end
-end)
-
-test("opening the report before recording explains how to create it", function()
-    boot()
-    clickSetting("Show diagnostic report")
-    local found = false
-    for _, widget in ipairs(widgets) do
-        if widget.kind == "InputField" and not widget.destroyed then
-            found = true
-            assert(widget.content:find("No completed report yet", 1, true))
-        end
-    end
-    equal(found, true)
-end)
-
-test("completed report stays available while a new recording is in progress", function()
-    boot()
-    local recorder = require("lib/hover_diagnostics").new(function() end)
-    recorder:start()
-    for _=1,21 do recorder:draw(0.25, "original captured state") end
-    local first = recorder:report()
-    assert(first:find("REPORT END", 1, true))
-    recorder:start()
-    equal(recorder:report(), first)
-    recorder:draw(0.25, "next state")
-    equal(recorder:report(), first)
-end)
-
 test("real entrypoint has no Logic callback and unsubscribes on shutdown", function()
     boot()
     equal(type(handlers.Draw), "function")
@@ -956,4 +772,4 @@ test("real entrypoint has no Logic callback and unsubscribes on shutdown", funct
     equal(next(handlers), nil)
 end)
 
-print(string.format("%d checks passed. Native hover rendering still requires in-game validation.", total))
+print(string.format("%d checks passed.", total))

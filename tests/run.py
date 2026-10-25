@@ -1,8 +1,8 @@
-"""Execute the real plugin with Lua 5.4 and a substitute native API."""
+"""Run plugin tests with Lua 5.4."""
 import argparse
 from pathlib import Path
 import sys
-import re
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--lua-packages", type=Path, help="Directory containing lupa")
@@ -14,12 +14,8 @@ from lupa.lua54 import LuaRuntime
 root = Path(__file__).resolve().parents[1]
 lua = LuaRuntime(unpack_returned_tuples=True)
 lua.globals().pluginRoot = root.as_posix()
-dump_variables = {}
-for line in (root / "VarPlayer").read_text(encoding="utf-8-sig").splitlines():
-    match = re.match(r"^(-?\d+)\s+(\S+)\s+INTEGER(?:\s|$)", line)
-    if match:
-        dump_variables[match[2]] = int(match[1])
-assert re.search(r"^93\s+INV$", (root / "Inv").read_text(encoding="utf-8-sig"), re.M)
-lua.globals().dumpVariables = lua.table_from(dump_variables)
+bindings = json.loads((root / "tests/fixtures/storage-bindings.json").read_text(encoding="utf-8"))
+assert bindings["backpack"] == 93
+lua.globals().dumpVariables = lua.table_from(bindings["variables"])
 lua.execute("package.path = pluginRoot .. '/?.lua;' .. package.path")
 lua.execute((root / "tests/runtime.lua").read_text(encoding="utf-8"))

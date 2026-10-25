@@ -1,4 +1,4 @@
-"""Create a reproducible development ZIP and verify its contents against source."""
+"""Build the plugin ZIP and verify its contents."""
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
 files = [root / "main.lua", root / "plugin.json", root / "README.md"]
 files += sorted((root / "lib").rglob("*.lua"))
-output = root / "releases" / f"StoneSpiritSpy-{manifest['version']}-dev.zip"
+output = root / "releases" / f"StoneSpiritSpy-{manifest['version']}.zip"
 output.parent.mkdir(exist_ok=True)
 
 with ZipFile(output, "w", compression=ZIP_DEFLATED) as archive:

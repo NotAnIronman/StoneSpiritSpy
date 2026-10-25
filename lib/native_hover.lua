@@ -24,7 +24,6 @@ end
 function M.new()
     local self = {}
     local name, suffix, applied, lastError
-    local state = "no hover target"
 
     local function restore()
         if applied then
@@ -41,12 +40,7 @@ function M.new()
 
     function self:clear()
         name, suffix = nil, nil
-        state = "no hover target"
         restore()
-    end
-
-    function self:diagnosticState()
-        return "target=" .. tostring(name) .. " | " .. state
     end
 
     function self:setTarget(rockName, countSuffix)
@@ -57,18 +51,15 @@ function M.new()
     function self:draw()
         if not name then return end
         local ok, err = pcall(function()
-            -- Client 951-1 live report: TOPLEVEL_V2 static=902/0:0 contains
-            -- "Mine Copper rock". TEXT_TOOLTIP instead contains a placeholder.
             local label = ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 902, 0, 0)
-            if not label then state = "native TOPLEVEL_V2 label 902/0:0 missing"; restore(); return end
+            if not label then restore(); return end
             if label.type ~= ui.ComponentType.LABEL then
-                state = "native label has unexpected type " .. tostring(label.type); restore(); return
-            end
-            if not label.visibleGlobal then
-                state = "native TOPLEVEL_V2 label 902/0:0 hidden"
                 restore(); return
             end
-            -- Live 0.3.7 capture: label -> 902 -> 901 -> frame 899 -> viewport 896.
+            if not label.visibleGlobal then
+                restore(); return
+            end
+            -- Native hierarchy: label -> 902 -> 901 -> frame 899 -> viewport 896.
             -- Frame 899 is fixed-width; its inner layers inherit that width.
             local box = ui.Interfaces:GetComponent(id.Interface.TOPLEVEL_V2, 899)
             local ancestor, insideFrame, parentGrowth = label.parent, false, 1
@@ -79,9 +70,6 @@ function M.new()
                 ancestor = ancestor.parent
             end
             if not box or box.type ~= ui.ComponentType.LAYER or not insideFrame then
-                state = "native hover frame 899 invalid: found=" .. tostring(box ~= nil)
-                    .. " type=" .. tostring(box and box.type) .. " expected=" .. tostring(ui.ComponentType.LAYER)
-                    .. " ancestor=" .. tostring(insideFrame)
                 restore(); return
             end
             if applied and (applied.label ~= label or applied.box ~= box) then restore() end
@@ -91,7 +79,6 @@ function M.new()
             local first, last = plain:find(name, 1, true)
             if not first or (first > 1 and plain:sub(first - 1, first - 1):match("[%w]"))
                 or plain:sub(last + 1, last + 1):match("[%w]") then
-                state = "native label text does not match target: " .. tostring(current)
                 restore(); return
             end
 
@@ -114,11 +101,8 @@ function M.new()
             applied.renderedLabelSize = {math.ceil(labelSize[1] + extraWidth - inheritedWidth),
                 labelSize[2], labelSize[3], labelSize[4]}
             setSize(label, applied.renderedLabelSize)
-            state = "native label write readback=" .. tostring(label.content == rendered)
-                .. " frameWidth=" .. tostring(box.width) .. " labelWidth=" .. tostring(label.width)
         end)
         if not ok then
-            state = "native update error: " .. tostring(err)
             restore()
             if tostring(err) ~= lastError then
                 log("Stone Spirit Spy could not update the native hover box: " .. tostring(err))
