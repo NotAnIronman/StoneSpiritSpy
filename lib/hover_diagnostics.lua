@@ -2,6 +2,7 @@ local Catalog = require("lib/catalog")
 local M = {}
 local PANEL_NAMES = {"TEXT_TOOLTIP", "TOPLEVEL_V2_HOVER_TARGET", "MINIMENU", "TOPLEVEL_V2"}
 local PREFIX = "[SSS-HOVER] "
+local COLLECTION_TYPES = {"LAYER", "PANEL", "GRID", "PAGED_LAYER", "PAGED_CAROUSEL", "GROUP_BOX"}
 
 local function short(value)
     return tostring(value):gsub("[\r\n]", " "):sub(1, 180)
@@ -25,8 +26,9 @@ function M.new(output)
 
     function self:start()
         capture = {remaining=5, frames=0, calls=0, panel=1, component=-1,
-            menus={}, states={}, labels={}, panels={}, seen={}}
-        output(PREFIX .. "Stone Spirit Spy 0.3.3 recording for 5 seconds. Close settings and hover Copper rock.")
+            static=0, dynamic=0, collections=0, truncated=0, pending={},
+            menus={}, states={}, labels={}, samples={}, panels={}, seen={}}
+        output(PREFIX .. "Stone Spirit Spy 0.3.4 recording for 5 seconds. Close settings and hover Copper rock.")
     end
 
     function self:menu(entries, context)
@@ -50,7 +52,54 @@ function M.new(output)
         remember("menus", table.concat(lines, " | "), 6)
     end
 
+    local function inspect(component, path, depth)
+        if component.type == ui.ComponentType.LABEL then
+            local content = component.content
+            local plain = Catalog.normalise(content)
+            local parent = component.parent
+            local description = path .. " category=" .. short(component.categoryID)
+                .. " dynamic=" .. short(component.dynamicID)
+                .. " visible=" .. short(component.visibleGlobal)
+                .. " restricted=" .. short(component.isRestricted)
+                .. " parentStatic=" .. short(parent and parent.staticID)
+                .. " text=" .. short(content)
+            if plain:find("copper", 1, true) or plain:find("rock", 1, true) then
+                remember("labels", description, 32)
+            elseif path:find("TEXT_TOOLTIP", 1, true) or path:find("TOPLEVEL_V2_HOVER_TARGET", 1, true) then
+                remember("samples", description, 24)
+            end
+            return
+        end
+        local collection = false
+        for _, name in ipairs(COLLECTION_TYPES) do
+            if ui.ComponentType[name] ~= nil and component.type == ui.ComponentType[name] then
+                collection = true; break
+            end
+        end
+        if not collection then return end
+        if depth >= 8 then capture.truncated = capture.truncated + 1; return end
+        capture.collections = capture.collections + 1
+        local children = 0
+        component:IterateDynamicComponents(function(child)
+            children = children + 1
+            if #capture.pending >= 512 then
+                capture.truncated = capture.truncated + 1
+                return true
+            end
+            capture.pending[#capture.pending+1] = {component=child, depth=depth+1, path=path}
+            if children >= 64 then capture.truncated = capture.truncated + 1; return true end
+            return false
+        end)
+    end
+
     local function scanOne()
+        local pending = table.remove(capture.pending)
+        if pending then
+            capture.dynamic = capture.dynamic + 1
+            local child = pending.component
+            inspect(child, pending.path .. "/" .. short(child.categoryID) .. ":" .. short(child.dynamicID), pending.depth)
+            return
+        end
         local panelName = PANEL_NAMES[capture.panel]
         local resolved, panelID = pcall(function() return id.Interface[panelName] end)
         if not resolved then panelID = nil end
@@ -70,25 +119,16 @@ function M.new(output)
             capture.component, capture.panel = -1, capture.panel % #PANEL_NAMES + 1
         end
         local component = panelID and ui.Interfaces:GetComponent(panelID, staticID)
-        if not component or component.type ~= ui.ComponentType.LABEL then return end
-        local content = component.content
-        local plain = Catalog.normalise(content)
-        if plain:find("copper", 1, true) or plain:find("rock", 1, true) then
-            local parent = component.parent
-            remember("labels", panelName .. " static=" .. staticID
-                .. " visible=" .. short(component.visibleGlobal)
-                .. " restricted=" .. short(component.isRestricted)
-                .. " parentStatic=" .. short(parent and parent.staticID)
-                .. " text=" .. short(content), 16)
-        end
+        capture.static = capture.static + 1
+        if component then inspect(component, panelName .. " static=" .. staticID, 0) end
     end
 
     function self:draw(delta, hoverState)
         if not capture then return end
         capture.frames = capture.frames + 1
         remember("states", short(hoverState), 10)
-        -- Only an explicit recording reads UI candidates. At most 16 lookups
-        -- per Draw. Three panels cover IDs 0..255; TOPLEVEL_V2 covers 0..2047.
+        -- Each step reads one static candidate or inspects one queued dynamic child.
+        -- Child collection is bounded separately, including nested collections.
         for _=1,16 do
             local ok, err = pcall(scanOne)
             if not ok then remember("states", "scan error: " .. short(err), 10) end
@@ -97,8 +137,11 @@ function M.new(output)
             capture.remaining = capture.remaining - math.min(delta, 0.25)
         end
         if capture.remaining > 0 and capture.frames < 600 then return end
-        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.3 frames=" .. capture.frames .. " UI lookups=" .. capture.calls}
-        for _, group in ipairs({"menus", "states", "panels", "labels"}) do
+        local lines = {PREFIX .. "REPORT BEGIN Stone Spirit Spy 0.3.4 frames=" .. capture.frames .. " UI lookups=" .. capture.calls,
+            PREFIX .. "coverage: static=" .. capture.static .. " dynamic=" .. capture.dynamic
+                .. " collections=" .. capture.collections .. " capped=" .. capture.truncated
+                .. " pending=" .. #capture.pending}
+        for _, group in ipairs({"menus", "states", "panels", "labels", "samples"}) do
             if #capture[group] == 0 then lines[#lines+1] = PREFIX .. group .. ": none captured" end
             for _, line in ipairs(capture[group]) do lines[#lines+1] = PREFIX .. group .. ": " .. line end
         end

@@ -1,7 +1,7 @@
 # Stone Spirit Spy
 
-Stone Spirit Spy adds your ore-box stone spirits to the game's existing hover box
-when you hover over a rock. It also adds the count to the right-click menu.
+Stone Spirit Spy adds your ore-box stone spirit count to rock names in the
+right-click menu. Updating the game's existing hover box is still under investigation.
 Enable **Number only** for a shorter label:
 
 ```text
@@ -14,8 +14,10 @@ or hover over the box first. Loose spirits in your backpack and bank are exclude
 Multiple boxes do not multiply the displayed count. Banking your boxes removes
 the annotation.
 
-Version **0.3.3** adds a selectable diagnostic report in the plugin settings.
-A working native hover fix has not yet been confirmed in game.
+Version **0.3.4** extends the selectable diagnostic report to inspect nested dynamic
+components. The supplied 0.3.3 report confirmed the Copper target and count, but
+`TEXT_TOOLTIP` component 15 contained the placeholder `Tooltip text`. The static
+scan found no rock label. This build adds evidence gathering, not a confirmed hover fix.
 
 This is a development build. Local Lua checks pass against the supplied
 configuration dumps. Hover rendering and server updates still need an in-game check.
@@ -45,8 +47,8 @@ The plugin needs no additional plugins, permissions, or network access.
 
 Open **Plugin Hub > Manage > Stone Spirit Spy** and select its gear icon.
 
-- **Show count on hover:** On by default. Adds the count to the existing game hover
-  box without right-clicking. Turn it off to keep the count only in the right-click menu.
+- **Show count on hover:** On by default. Enables the experimental update of the
+  existing game hover box. The missing hover count remains unresolved.
 - **Number only:** Off by default. Turn it on for `Copper rock (17)` instead of
   `Copper rock (17 Copper Stone Spirits)`. This affects both displays.
 - **Match carried ore-box tier:** Off by default. Turn it on to hide hover and
@@ -77,9 +79,16 @@ transcription is needed.
 
 The report includes the selected menu target, active display settings, the native
 hover update result, and rock-related text found in four candidate UI panels.
-The recorder reads candidate components only while recording, with at most sixteen
-lookups per Draw. Its scan does not modify candidate labels. This gives live evidence
-to check the current `TEXT_TOOLTIP` assumption instead of repeating it in a test fixture.
+It scans static components and their dynamic descendants, recording category and
+dynamic IDs in each path. Samples from the two tooltip panels include placeholder
+and empty labels. Coverage counters show static reads, dynamic visits, collection
+visits, and any scan caps reached.
+
+The recorder runs only during an explicit recording. Each Draw processes at most
+sixteen static lookups or queued dynamic components. Each collection contributes
+at most 64 children; nesting is limited to eight levels and the queue to 512 entries.
+Stale components are reported without stopping the recording. The scan does not
+modify candidate labels.
 
 ## Check the count in game
 
@@ -150,11 +159,13 @@ local RuneScape cache snapshot `2736`, build `950.1`.
 The plugin uses [`VarType.value`](https://developer.runescape.com/rs/game/config/vartype.html)
 for current counts and [`MiniMenuEntry.overrideText`](https://developer.runescape.com/rs/game/minimenu.html)
 to append menu labels during `MiniMenuReady`. The highest-priority entry supplies
-the pending native hover annotation. `Draw` applies it to the existing `TEXT_TOOLTIP`
-text component after the client generates the base hover text. The native layout
-was checked against cache snapshot `2736`, build `950.1`: component `15` is the text,
-and component `1` is its box. Component type, visibility, and rock-name checks keep
-the annotation scoped to the matching tooltip. No hover UI components are created.
+the pending native hover annotation. `Draw` attempts to apply it to `TEXT_TOOLTIP`
+component `15` only when its visible text matches the rock name. Cache snapshot
+`2736`, build `950.1` identifies that label and box component `1`, but the supplied
+live report shows this is not the visible rock label in the reported scenario.
+The recorder also inspects dynamic components using the documented
+[`IterateDynamicComponents`](https://developer.runescape.com/rs/ui/component_collection.html)
+API. No hover UI components are created.
 The [settings layer](https://developer.runescape.com/rs/core/events.html#settingslayerready)
 contains the display toggles, saved as three PersistentDB booleans.
 Inventory events invalidate the carried-box check. The Draw callback returns

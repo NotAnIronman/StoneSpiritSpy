@@ -235,7 +235,7 @@ local function boot(preferences)
     nativeTooltip.type, nativeTooltip.font, nativeTooltip.visibleGlobal = 4, 1, true
     nativeTooltip.content = "Mine <col=ffff00>Copper rock</col>"
     nativePanels[1486] = {[15]=nativeTooltip, [1]=nativeTooltipBox}
-    ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4},
+    ui = {Hook={ONBUTTONPRESSED=1}, ComponentType={LABEL=4, LAYER=0},
         TextContentVisibilityMode={VISIBLE=0}, InputFieldFilterMode={NONE=0},
         Interfaces={GetComponent=function(_, interfaceID, componentID)
         uiLookups = uiLookups + 1
@@ -626,6 +626,52 @@ test("diagnostic recorder finds an alternative rock label without modifying it",
     local before = uiLookups
     recorder:draw(1, "idle")
     equal(uiLookups, before)
+end)
+
+test("diagnostic follows nested dynamic labels while static tooltip holds reported placeholder", function()
+    boot()
+    nativeTooltip.content = "Tooltip text"
+    local label = {type=4, content="<col=00ffff>Copper rock", categoryID=2, dynamicID=7,
+        visibleGlobal=true, isRestricted=false, parent={staticID=3}}
+    local nested = {type=0, categoryID=0, dynamicID=1,
+        IterateDynamicComponents=function(_, callback) callback(label, true) end}
+    local root = {type=0, IterateDynamicComponents=function(_, callback) callback(nested, true) end}
+    nativePanels[1489] = {[3]=root}
+    local recorder = require("lib/hover_diagnostics").new(function() end)
+    recorder:start()
+    for _=1,600 do
+        local before = uiLookups
+        recorder:draw(nil, "placeholder")
+        assert(uiLookups-before <= 16)
+    end
+    local report = recorder:report()
+    assert(report:find("TOPLEVEL_V2_HOVER_TARGET static=3/0:1/2:7", 1, true))
+    assert(report:find("text=Tooltip text", 1, true))
+    assert(report:match("dynamic=[1-9]%d*"))
+    assert(report:find("capped=0", 1, true))
+    equal(nativeTooltip.content, "Tooltip text")
+    equal(label.content, "<col=00ffff>Copper rock")
+end)
+
+test("diagnostic caps large dynamic collections and reports stale children", function()
+    boot()
+    local visited = 0
+    local stale = setmetatable({}, {__index=function() error("stale native child") end})
+    nativePanels[1486][0] = {type=0, IterateDynamicComponents=function(_, callback)
+        for i=1,1000 do
+            visited=visited+1
+            if callback(i == 1 and stale or {type=4, content="Copper rock"}, true) then break end
+        end
+    end}
+    local recorder = require("lib/hover_diagnostics").new(function() end)
+    recorder:start()
+    recorder:draw(nil, "placeholder")
+    equal(visited, 64)
+    for _=1,599 do recorder:draw(nil, "placeholder") end
+    local report = recorder:report()
+    assert(report:find("stale native child", 1, true))
+    assert(report:match("capped=[1-9]%d*"))
+    assert(report:find("REPORT END", 1, true))
 end)
 
 test("settings diagnostic records actual target and options without saving a new setting", function()

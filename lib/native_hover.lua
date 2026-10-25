@@ -46,8 +46,8 @@ function M.new()
     function self:draw()
         if not name then return end
         local ok, err = pcall(function()
-            -- Native TEXT_TOOLTIP layout, checked against cache 2736/build 950.1:
-            -- component 15 is its text; component 1 is the existing tooltip box.
+            -- Candidate layout from cache 2736/build 950.1. The live report showed
+            -- placeholder text here, so never write unless the rock name matches.
             local interfaceID = id.Interface.TEXT_TOOLTIP
             local label = ui.Interfaces:GetComponent(interfaceID, 15)
             local box = ui.Interfaces:GetComponent(interfaceID, 1)
