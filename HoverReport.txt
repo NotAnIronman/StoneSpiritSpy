@@ -1,4 +1,70 @@
 
+Stone Spirit Spy(207): [SSS-HOVER] Open plugin settings > Show diagnostic report to select and copy the report.
+
+Stone Spirit Spy(206): [SSS-HOVER] REPORT END
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=5 parent chain ended
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=4 rawSize=0,0,1.0,1.0 xy=0.0,0.0 parent=nil parentStatic=nil
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=4 interface=1477 static=896 category=-1 dynamic=-1 type=20 visible=true width=1920 height=1080
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=3 rawSize=135,54,0.0,0.0 xy=236.0,533.0 parent=1477/896/-1:-1 parentStatic=1477/896/-1:-1
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=3 interface=1477 static=899 category=-1 dynamic=-1 type=20 visible=true width=135 height=54
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=2 rawSize=-8,-8,1.0,1.0 xy=240.0,537.0 parent=1477/899/-1:-1 parentStatic=1477/899/-1:-1
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=2 interface=1477 static=901 category=-1 dynamic=-1 type=20 visible=true width=127 height=46
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=1 rawSize=-10,-4,1.0,1.0 xy=245.0,539.0 parent=1477/901/-1:-1 parentStatic=1477/901/-1:-1
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=1 interface=1477 static=902 category=-1 dynamic=-1 type=20 visible=true width=117 height=42
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=0 rawSize=0,18,1.0,0.0 xy=245.0,539.0 parent=1477/902/-1:-1 parentStatic=1477/902/-1:-1
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: trace TOPLEVEL_V2 static=902/0:0 depth=0 interface=1477 static=902 category=0 dynamic=0 type=2 visible=true width=117 height=18
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: candidate TOPLEVEL_V2/902 rawSize=-10,-4,1.0,1.0 xy=245.0,539.0 parent=1477/901/-1:-1 parentStatic=1477/901/-1:-1
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: candidate TOPLEVEL_V2/902 interface=1477 static=902 category=-1 dynamic=-1 type=20 visible=true width=117 height=42
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: candidate TOPLEVEL_V2/892 rawSize=0,0,1.0,1.0 xy=0.0,0.0 parent=1477/891/-1:-1 parentStatic=1477/891/-1:-1
+
+Stone Spirit Spy(206): [SSS-HOVER] layout: candidate TOPLEVEL_V2/892 interface=1477 static=892 category=-1 dynamic=-1 type=20 visible=true width=1920 height=1080
+
+Stone Spirit Spy(206): [SSS-HOVER] samples: TEXT_TOOLTIP static=15 category=-1 dynamic=-1 visible=true restricted=false parentStatic=1 text=Tooltip text
+
+Stone Spirit Spy(206): [SSS-HOVER] labels: TOPLEVEL_V2 static=902/0:0 category=0 dynamic=0 visible=true restricted=false parentStatic=902 text=Mine Copper rock
+
+Stone Spirit Spy(206): [SSS-HOVER] panels: TOPLEVEL_V2 id=1477 loaded=true
+
+Stone Spirit Spy(206): [SSS-HOVER] panels: MINIMENU id=1322 loaded=true
+
+Stone Spirit Spy(206): [SSS-HOVER] panels: TOPLEVEL_V2_HOVER_TARGET id=1489 loaded=false
+
+Stone Spirit Spy(206): [SSS-HOVER] panels: TEXT_TOOLTIP id=1486 loaded=true
+
+Stone Spirit Spy(206): [SSS-HOVER] states: target=copper rock | native hover frame 892 invalid: found=true type=20 expected=20 ancestor=false
+
+Stone Spirit Spy(206): [SSS-HOVER] states: target=copper rock | native TOPLEVEL_V2 label 902/0:0 hidden
+
+Stone Spirit Spy(206): [SSS-HOVER] states: target=nil | no hover target
+
+Stone Spirit Spy(206): [SSS-HOVER] menus: enabled=true | focused=true | menuOpen=false | hasBox=true | tierFilter=true | target=Copper rock | topType=3 | topSubject=Copper rock | topText=Mine Copper rock | topOverride=Mine Copper rock (15)
+
+Stone Spirit Spy(206): [SSS-HOVER] coverage: static=3200 dynamic=4056 collections=1059 capped=4 pending=0
+
+Stone Spirit Spy(206): [SSS-HOVER] REPORT BEGIN Stone Spirit Spy 0.3.7 frames=454 UI lookups=3208
+
+Stone Spirit Spy(44): [SSS-HOVER] Stone Spirit Spy 0.3.7 recording for 5 seconds. Close settings and hover Copper rock.
+
+Stone Spirit Spy(94): Stone Spirit Spy 0.3.7 diagnostic build loaded. Carry an ore box and hover over a rock.
+prl StoneSpiritSpy
+prf
+
+Tilemarkers(28): loaded
+
 Stone Spirit Spy(151): [SSS-HOVER] Open plugin settings > Show diagnostic report to select and copy the report.
 
 Stone Spirit Spy(150): [SSS-HOVER] REPORT END
